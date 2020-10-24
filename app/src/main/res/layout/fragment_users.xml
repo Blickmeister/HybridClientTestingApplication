@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/fragment_users"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ScrollView
+        android:id="@+id/scroll_view_users"
+        android:layout_height="match_parent"
+        android:scrollbars="horizontal|vertical"
+        android:layout_width="match_parent"
+        android:layout_marginTop="5dip"
+        android:scrollbarStyle="outsideInset"
+        android:fillViewport="true">
+
+        <HorizontalScrollView
+            android:id="@+id/horizontalView"
+            android:layout_height="wrap_content"
+            android:scrollbars="horizontal|vertical"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="5dip">
+
+            <TableLayout
+                android:id="@+id/table_layout_users"
+                android:layout_width="409dp"
+                android:layout_height="650dp"
+                android:layout_marginStart="1dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="1dp"
+                android:layout_marginBottom="1dp"
+                android:stretchColumns="*"
+                android:textAlignment="center"
+                android:background="@color/colorAccent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TableRow android:background="#0079D6" android:padding="5dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_userID" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_latitude" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_longitude" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_actual_state" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_future_state" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_first_conn" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_last_conn" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_temperature" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="4"
+                        android:padding="4dp"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:text="@string/txt_users_table_pressure" />
+                </TableRow>
+            </TableLayout>
+
+
+        </HorizontalScrollView>
+
+    </ScrollView >
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="177dp"
+        android:layout_marginTop="66dp"
+        android:layout_marginEnd="176dp"
+        android:layout_marginBottom="80dp"
+        android:text="@string/txt_users"
+        app:layout_constraintBottom_toTopOf="@+id/scroll_view_users"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

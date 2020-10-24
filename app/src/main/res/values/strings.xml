@@ -1,0 +1,45 @@
+<resources>
+    <string name="app_name">Hybrid Client Testing Application</string>
+    <string name="users_activity_name">Show clients activity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_conf">Konfigurace aplikace</string>
+    <string name="menu_func">Vzorová funkcionalita</string>
+
+    <string name="radio_thin">Tenký klient</string>
+    <string name="radio_hybrid_offline">Hybridní klient s možností offline režimu</string>
+    <string name="radio_hybrid_p2p">Hybridní klient s možností poskytnutí služby skrze p2p komunikaci</string>
+    
+    <string name="btn_getFat_offline">Ztloustnout - offline režim</string>
+    <string name="btn_getFat_p2p">Ztloustnout - peer-to-peer komunikace</string>
+    <string name="btn_slim">Zhubnout - tenký klient</string>
+    <string name="btn_show_clients">Zobrazit seznam klientů</string>
+    <string name="btn_show_map">Zobrazit mapu</string>
+
+    <string name="txt_conf_manual_conf">Vynucené akce uživatelem</string>
+    <string name="txt_users">Seznam klientů</string>
+    <string name="txt_users_table_userID">SSID klienta</string>
+    <string name="txt_users_table_latitude">Zeměpisná šířka</string>
+    <string name="txt_users_table_longitude">Zeměpisná délka</string>
+    <string name="txt_users_table_actual_state">Aktuální stav</string>
+    <string name="txt_users_table_future_state">Možný stav</string>
+    <string name="txt_users_table_first_conn">1. připojení k serveru</string>
+    <string name="txt_users_table_last_conn">Poslední připojení k serveru</string>
+    <string name="txt_users_table_temperature">teplota vzduchu</string>
+    <string name="txt_users_table_pressure">tlak vzduchu</string>
+    <string name="txt_func_sensors_main">Hodnoty ze senzorů:</string>
+    <string name="txt_func_sensors_temperature">Teplotní senzor:</string>
+    <string name="txt_func_sensors_pressure">Tlakový senzor:</string>
+    <string name="txt_func_temperature_value">Hodnota teplotního senzoru</string>
+    <string name="txt_func_pressure_value">Hodnota tlakového senzoru</string>
+    <string name="txt_func_show_map">Zobrazit mapu s hodnotami ostatních uživatelů</string>
+
+
+    <string name="switch_func">Zapnout/Vypnout:</string>
+
+</resources>

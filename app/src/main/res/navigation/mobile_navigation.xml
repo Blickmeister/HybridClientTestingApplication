@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/nav_conf">
+
+    <fragment
+        android:id="@+id/nav_conf"
+        android:name="cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration.ConfigurationFragment"
+        android:label="@string/menu_conf"
+        tools:layout="@layout/fragment_conf" />
+
+    <fragment
+        android:id="@+id/nav_func"
+        android:name="cz.fim.uhk.thesis.hybrid_client_test_app.ui.samplefunctionality.SampleFunctionalityFragment"
+        android:label="@string/menu_func"
+        tools:layout="@layout/fragment_func" />
+
+    <fragment
+        android:id="@+id/nav_users"
+        android:name="cz.fim.uhk.thesis.hybrid_client_test_app.ui.UsersFragment"
+        android:label="@string/txt_users"
+        tools:layout="@layout/fragment_users" />
+
+    <fragment
+        android:id="@+id/nav_map"
+        android:name="cz.fim.uhk.thesis.hybrid_client_test_app.ui.map.MapFragment"
+        android:label="@string/txt_func_show_map"
+        tools:layout="@layout/fragment_map"/>
+</navigation>
