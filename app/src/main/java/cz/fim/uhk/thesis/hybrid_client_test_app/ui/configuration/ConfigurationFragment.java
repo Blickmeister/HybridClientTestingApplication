@@ -1,75 +1,26 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.ContextWrapper;
-import android.database.Cursor;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Debug;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Scanner;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
-import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.Navigation;
 import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
 import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.database.DatabaseHelper;
-import cz.fim.uhk.thesis.hybrid_client_test_app.ui.UsersFragment;
-import dalvik.system.DexClassLoader;
-import okhttp3.ResponseBody;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity.LibraryLoaderModule;
 
 public class ConfigurationFragment extends Fragment implements View.OnClickListener {
 
     private static final String TAG = "MainAct/ConfigFrag";
     private static final String[] libraryNames = {"LibraryForOfflineMode", ""};
-    private static final int permissionRequestCode = 1;
-    private static final String libraryDownloadUrl = "http://10.0.2.2:8080/library/download/";
 
-    //private HomeViewModel homeViewModel;
     private TextView textView;
     private Button btnGetFatOffline;
     private Button btnGetFatP2p;
@@ -78,22 +29,14 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
     private RadioGroup radioGroup;
 
     private DatabaseHelper myDb;
+    private MainActivity mainActivity;
 
-    private boolean isLibraryDownloadedSuccessfully = false;
-
+    //private boolean isLibraryDownloadedSuccessfully = false;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        /*homeViewModel =
-                ViewModelProviders.of(this).get(HomeViewModel.class);*/
         View root = inflater.inflate(R.layout.fragment_conf, container, false);
         textView = root.findViewById(R.id.text_conf);
-        /*homeViewModel.getText().observe(this, new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                textView.setText(s);
-            }
-        });*/
         textView.setText("Nastavení konfigurace aplikace");
         btnGetFatOffline = root.findViewById(R.id.btn_getFat_offline);
         btnGetFatP2p = root.findViewById(R.id.btn_getFat_p2p);
@@ -101,7 +44,8 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
         btnShowClients = root.findViewById(R.id.btn_show_clients);
         radioGroup = root.findViewById(R.id.radioGroup_conf);
 
-        myDb = new DatabaseHelper(getContext());
+        mainActivity = (MainActivity) getActivity();
+        myDb = mainActivity.getMyDb();
 
         // přesměrování na fragment zobrazující seznam klientů ze serveru
         btnShowClients.setOnClickListener(new View.OnClickListener() {
@@ -127,24 +71,22 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
                 switch (checkedId) {
                     case R.id.radio_thin:
                         // aplikace se bude chovat jako tenký klient
+                        mainActivity.setApplicationState(1);
                         textView.setText("thin");
                         break;
                     case R.id.radio_hybrid_offline:
                         // aplikace se bude chovat jako tenký klient s možností ztloustnout a fungovat offline
+                        mainActivity.setApplicationState(2);
                         textView.setText("offline");
                         break;
                     case R.id.radio_hybrid_p2p:
                         // aplikace se bude chovat jako tenký klient s možností ztloustnout a poskytnout službu okolním klientům
+                        mainActivity.setApplicationState(3);
                         textView.setText("p2p");
                         break;
                 }
             }
         });
-
-        ActivityCompat.requestPermissions(getActivity(),
-                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                permissionRequestCode);
-
         return root;
     }
 
@@ -152,26 +94,9 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_getFat_offline:
-                //
-                /*Object instance = loadLibrary(getContext().getApplicationInfo().dataDir
-                        + File.pathSeparator + "libs" + File.pathSeparator + "LibraryForOfflineMode"
-                        + File.pathSeparator + "app-release-unsigned.apk",
-                        "MainClass",
-                        "LibraryForOfflineMode");*/
-                ContextWrapper contextWrapper = new ContextWrapper(getContext());
-                Object instance = loadLibrary(
-                        contextWrapper.getFilesDir() + "/" + "libs",
-                        libraryNames[0]);
-                if (instance != null) {
-                    try {
-                        Method m = instance.getClass().getMethod("start");
-                        m.invoke(instance);
-                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    Toast.makeText(getContext(), "Knihovnu se nepodařilo zavést", Toast.LENGTH_SHORT).show();
-                }
+                // zavedení knihovny pro offline režim pomocí modulu pro dynamické zavedení knihoven
+                LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, getContext(), getActivity());
+                libraryLoaderModule.loadLibrary(libraryNames[0]);
                 break;
             case R.id.btn_getFat_p2p:
                 // p2p obsluha
@@ -180,7 +105,7 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
     }
 
     // kompletní proces kontroly stavu, stažení, odzipování a dynamického zavedení knihovny
-    private Object loadLibrary(String dexPath, String libraryName) {
+    /*private Object loadLibrary(String dexPath, String libraryName) {
         // kontrola zda je knihovna uz v ulozisti pres zaznam v db
         if (isLibraryInDirection(libraryName)) {
             // pokud ano tak se zavede
@@ -196,9 +121,9 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
             }
         }
         return null; // TODO mozna nechat
-    }
+    }*/
 
-    private boolean saveLibraryInformationToDb(String dexPath, String libraryName) {
+    /*private boolean saveLibraryInformationToDb(String dexPath, String libraryName) {
         List<String> data = new ArrayList<>();
         // získání dat z txt
         String pathToFile = dexPath + "/" + libraryName + "/" + "descriptor.txt";
@@ -218,10 +143,10 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
         // uložení informací do db
         myDb.insertData(libraryName, data.get(1), data.get(3), data.get(4));
         return true;
-    }
+    }*/
 
     // metoda pro stažení dané knihovny ze serveru
-    @SuppressLint("StaticFieldLeak")
+    /*@SuppressLint("StaticFieldLeak")
     private boolean downloadLibrary(final String libraryName, final String dexPath) {
         // MainActivity mainActivity = (MainActivity) getActivity();
         // vytvoření nového vlákna pro připojení k serveru pomocí instance AsyncTask
@@ -286,9 +211,9 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Log.d(TAG, "Nepodařilo se stáhnout knihovnu ze serveru: " + t.getMessage());
             }
-        });*/
+        });
         return isLibraryDownloadedSuccessfully;
-    }
+    }*/
 
     /*private boolean writeResponseBodyToDisk(ResponseBody body, String path, String libraryName) {
         try {
@@ -331,7 +256,7 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
         }
     }*/
 
-    private boolean unpackZip(DataInputStream body, String path) throws IOException {
+    /*private boolean unpackZip(DataInputStream body, String path) throws IOException {
         InputStream is = body;
         ZipInputStream zis = new ZipInputStream(new BufferedInputStream(is));;
         boolean mkdirsSuccess = false;
@@ -358,7 +283,7 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
                     File fmd = new File(path + filename);
                     mkdirsSuccess = fmd.mkdirs();
                     continue;
-                }*/
+                }
 
                 //FileOutputStream fout = new FileOutputStream(path + filename);
 
@@ -379,10 +304,10 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
             zis.close();
         }
         return mkdirsSuccess;
-    }
+    }*/
 
     // metoda pro kontrolu zda je knihovna už v úložišti preš seznam knihoven v db
-    private boolean isLibraryInDirection(String libraryName) {
+    /*private boolean isLibraryInDirection(String libraryName) {
         // získání dat z databáze
         Cursor result = myDb.getAllData();
         if (result.getCount() == 0) {
@@ -400,10 +325,10 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
             }
         }
         return false;
-    }
+    }*/
 
     // metoda pro zavedení knihovny resp. její spouštěcí třídy
-    private Object loadClass(String dexPath, String libraryName) {
+    /*private Object loadClass(String dexPath, String libraryName) {
         // cesta ke konkrétní knihovně dle jejího názvu
         String completePath = dexPath + "/" + libraryName + "/" + myDb.getApkName(libraryName);
         // init loaderu pro zavedení knihovny
@@ -426,5 +351,5 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
             e.printStackTrace();
         }
         return classInstance;
-    }
+    }*/
 }

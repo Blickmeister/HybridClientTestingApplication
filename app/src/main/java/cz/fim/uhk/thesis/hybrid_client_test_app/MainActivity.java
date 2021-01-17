@@ -16,8 +16,8 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
-import cz.fim.uhk.thesis.hybrid_client_test_app.helper.GetClientsTimerTask;
-import cz.fim.uhk.thesis.hybrid_client_test_app.helper.TestDataTimerTask;
+import cz.fim.uhk.thesis.hybrid_client_test_app.helper.database.DatabaseHelper;
+import cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity.LibraryLoaderInterface;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.SensorInformation;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 import okhttp3.OkHttpClient;
@@ -26,13 +26,11 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import android.os.Handler;
-import android.util.Log;
 import android.view.Menu;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +44,9 @@ public class MainActivity extends AppCompatActivity {
     // 1 -> hybridní klient s offline režimem
     // 2 -> hybridní klient s p2p komunikací
     private int applicationState;
+    // kolekce instancí knihoven
+    private List<LibraryLoaderInterface> libraries = new ArrayList<>();
+    private DatabaseHelper myDb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
 
         // naplnění těl metod prostřednictvím retrofit objektu
         isCentralServerApi = retrofit.create(IsCentralServerApi.class);
+
+        // inicializace sqlite databáze pro správu knihoven v aplikaci
+        myDb = new DatabaseHelper(this);
 
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
@@ -191,5 +195,17 @@ public class MainActivity extends AppCompatActivity {
     }
     public void setApplicationState(int applicationState) {
         this.applicationState = applicationState;
+    }
+
+    public List<LibraryLoaderInterface> getLibraries() {
+        return libraries;
+    }
+
+    public void setLibraries(List<LibraryLoaderInterface> libraries) {
+        this.libraries = libraries;
+    }
+
+    public DatabaseHelper getMyDb() {
+        return myDb;
     }
 }

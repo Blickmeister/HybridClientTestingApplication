@@ -23,7 +23,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "library_name TEXT NOT NULL UNIQUE," +
                 "library_apk_name TEXT NOT NULL UNIQUE," +
                 "library_main_class TEXT NOT NULL," +
-                "library_desc TEXT)");
+                "library_desc TEXT" +
+                "library_is_active NOT NULL)");
     }
 
     @Override
@@ -32,13 +33,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public boolean insertData(String name, String apkName, String mainClass, String description) {
+    public boolean insertData(String name, String apkName, String mainClass, String description, boolean isActive) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put("library_name", name);
         contentValues.put("library_apk_name", apkName);
         contentValues.put("library_main_class", mainClass);
         contentValues.put("library_desc", description);
+        contentValues.put("library_is_active", isActive);
         long result = db.insert(TABLE_NAME,null ,contentValues);
         return result != -1;
     }
