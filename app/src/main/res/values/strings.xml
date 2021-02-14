@@ -21,7 +21,9 @@
     <string name="btn_show_clients">Zobrazit seznam klientů</string>
     <string name="btn_show_map">Zobrazit mapu</string>
 
-    <string name="txt_conf_manual_conf">Vynucené akce uživatelem</string>
+    <string name="txt_conf_manual_conf">Vynucené akce uživatelem:</string>
+    <string name="txt_conf_state">Aktuální stav aplikace:</string>
+    <string name="txt_conf_state_to_set">Tenký klient</string>
     <string name="txt_users">Seznam klientů</string>
     <string name="txt_users_table_userID">SSID klienta</string>
     <string name="txt_users_table_latitude">Zeměpisná šířka</string>
@@ -39,7 +41,10 @@
     <string name="txt_func_pressure_value">Hodnota tlakového senzoru</string>
     <string name="txt_func_show_map">Zobrazit mapu s hodnotami ostatních uživatelů</string>
 
-
     <string name="switch_func">Zapnout/Vypnout:</string>
+
+    <string name="sh_pref_file_key">uhk.fim.thesis.hybridClient.appContext</string>
+    <string name="sh_pref_app_state">app_state</string>
+    <string name="sh_pref_libraries">libraries</string>
 
 </resources>

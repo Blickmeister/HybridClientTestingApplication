@@ -1,12 +1,22 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -14,24 +24,29 @@ import androidx.navigation.Navigation;
 import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
 import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.database.DatabaseHelper;
+import cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity.LibraryLoaderForOfflineLibrary;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity.LibraryLoaderModule;
 
 public class ConfigurationFragment extends Fragment implements View.OnClickListener {
 
     private static final String TAG = "MainAct/ConfigFrag";
-    private static final String[] libraryNames = {"LibraryForOfflineMode", ""};
+    private static final String[] libraryNames = {"LibraryForOfflineMode", "TestLibrary"};
+    private static final int LIBRARY_FOR_OFFLINE_MODE_CODE = 1;
+    private static final int LIBRARY_FOR_P2P_MODE_CODE = 2;
+    private static final int LIBRARY_FOR_ONLINE_MODE_CODE = 0;
 
     private TextView textView;
     private Button btnGetFatOffline;
     private Button btnGetFatP2p;
     private Button btnSlim;
     private Button btnShowClients;
+    private TextView txtAppState;
+    private ProgressBar progressBar;
     private RadioGroup radioGroup;
 
     private DatabaseHelper myDb;
     private MainActivity mainActivity;
-
-    //private boolean isLibraryDownloadedSuccessfully = false;
+    private Context context;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -42,10 +57,23 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
         btnGetFatP2p = root.findViewById(R.id.btn_getFat_p2p);
         btnSlim = root.findViewById(R.id.btn_slim);
         btnShowClients = root.findViewById(R.id.btn_show_clients);
-        radioGroup = root.findViewById(R.id.radioGroup_conf);
+        txtAppState = root.findViewById(R.id.txt_conf_state_to_set);
+        progressBar = root.findViewById(R.id.progressBar);
+        progressBar.setVisibility(View.INVISIBLE);
 
         mainActivity = (MainActivity) getActivity();
+        context = getContext();
         myDb = mainActivity.getMyDb();
+
+        // nastavení GUI dle kontextu aplikace
+        SharedPreferences sharedPref = mainActivity.getSharedPref();
+        int state = sharedPref.getInt(getString(R.string.sh_pref_app_state), 0); // TODO odkomentovat
+        //int state = 0; // TODO pryc
+        if(state == LIBRARY_FOR_OFFLINE_MODE_CODE) {
+            setGUI(LIBRARY_FOR_OFFLINE_MODE_CODE);
+        } else if(state == LIBRARY_FOR_P2P_MODE_CODE) {
+            setGUI(LIBRARY_FOR_P2P_MODE_CODE);
+        }
 
         // přesměrování na fragment zobrazující seznam klientů ze serveru
         btnShowClients.setOnClickListener(new View.OnClickListener() {
@@ -62,46 +90,195 @@ public class ConfigurationFragment extends Fragment implements View.OnClickListe
         });
 
         btnGetFatOffline.setOnClickListener(this);
+        btnGetFatP2p.setOnClickListener(this);
+        btnSlim.setOnClickListener(this);
 
-        // listener pro radio group ovládající nastavení konfigurace aplikace
-        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                // checkedId udržuje aktivní btn
-
-                switch (checkedId) {
-                    case R.id.radio_thin:
-                        // aplikace se bude chovat jako tenký klient
-                        mainActivity.setApplicationState(1);
-                        textView.setText("thin");
-                        break;
-                    case R.id.radio_hybrid_offline:
-                        // aplikace se bude chovat jako tenký klient s možností ztloustnout a fungovat offline
-                        mainActivity.setApplicationState(2);
-                        textView.setText("offline");
-                        break;
-                    case R.id.radio_hybrid_p2p:
-                        // aplikace se bude chovat jako tenký klient s možností ztloustnout a poskytnout službu okolním klientům
-                        mainActivity.setApplicationState(3);
-                        textView.setText("p2p");
-                        break;
-                }
-            }
-        });
         return root;
     }
 
+
     @Override
     public void onClick(View v) {
+        // init instance modulu pro dynamické zavedení knihovny
+        final LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, getContext(),
+                (MainActivity) getActivity());
         switch (v.getId()) {
             case R.id.btn_getFat_offline:
-                // zavedení knihovny pro offline režim pomocí modulu pro dynamické zavedení knihoven
-                LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, getContext(), getActivity());
-                libraryLoaderModule.loadLibrary(libraryNames[0]);
+                // aplikace se bude chovat jako tlustý klient s možností fungovat offline
+                new AsyncTask<Void, Void, Void>() {
+                        int success;
+
+                        @Override
+                        protected void onPreExecute() {
+                            super.onPreExecute();
+                            progressBar.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        protected Void doInBackground(Void... voids) {
+                            Log.d(TAG, "start změny kontextu na tlustého klienta s offline režimem ....");
+                            // zavedení knihovny pro offline režim pomocí modulu pro dynamické zavedení knihoven
+                            success = libraryLoaderModule.loadLibrary(libraryNames[0]); // TODO wait for this line
+                            return null;
+                        }
+
+                        @Override
+                        protected void onPostExecute(Void aVoid) {
+                            super.onPostExecute(aVoid);
+                            if (success == 0) {
+                                // nastavení GUI
+                                setContextByLibrary(LIBRARY_FOR_OFFLINE_MODE_CODE, true, mainActivity, context);
+                            } else if(success == 1) {
+                                setContextByLibrary(LIBRARY_FOR_OFFLINE_MODE_CODE, false, mainActivity, context);
+                            }
+                            if(progressBar.isIndeterminate()) {
+                                progressBar.setVisibility(View.INVISIBLE);
+                            }
+                        }
+                    }.execute();
+                    /*Log.d(TAG, "start změny kontextu na tlustého klienta s offline režimem ....");
+                    editor.putInt(getString(R.string.sh_pref_app_state), 1);
+                    // zavedení knihovny pro offline režim pomocí modulu pro dynamické zavedení knihoven
+                    boolean success = libraryLoaderModule.loadLibrary(libraryNames[0]); // TODO wait for this line
+                    //notify();
+                    if(success) {
+                        // nastavení GUI
+                        txtAppState.setText("Tlustý klient s offline režimem");
+                        btnGetFatOffline.setEnabled(false);
+                        btnGetFatP2p.setEnabled(true);
+                        btnSlim.setEnabled(true);
+                        Log.d(TAG, "Úspěšná změna kontextu na tlustého klienta s offline režimem");
+                    } else {
+                        Log.e(TAG, "Nepodařilo se změnit kontext na tlusetého klienta s offline režimem");
+                    }*/
                 break;
             case R.id.btn_getFat_p2p:
+                // aplikace se bude chovat jako tlustý klient s možností poskytnout službu okolním klientům
+                //editor.putInt(getString(R.string.sh_pref_app_state), 2);
+                // zavedení knihovny pro offline režim pomocí modulu pro dynamické zavedení knihoven
+                libraryLoaderModule.loadLibrary(libraryNames[1]);
                 // p2p obsluha
                 break;
+            case R.id.btn_slim:
+                // aplikace se bude chovat jako tenký klient
+                setContextByLibrary(0, true, mainActivity, context);
+                // refresh main activity
+                /*Intent intent = mainActivity.getIntent();
+                intent.putExtra("")
+                mainActivity.finish();
+                startActivity(intent);*/
+                mainActivity.recreate();
+                /*if(!((MainActivity)getActivity()).getLibraries().isEmpty()) {
+                    Object lib = ((MainActivity)getActivity()).getLibraries().get(0);
+                    try {
+                        Method exit = lib.getClass().getMethod("exit");
+                        int res = (int) exit.invoke(lib);
+                    } catch (NoSuchMethodException e) {
+                        e.printStackTrace();
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                }*/
+                break;
         }
+        //editor.apply();
+    }
+
+    // nastavení GUI a kontextu aplikace dle typu knihovny
+    // libraryType dle řídící proměnné vyjadřující aktuální stav aplikace:
+    // 0 -> tenký klient
+    // 1 -> hybridní klient s offline režimem
+    // 2 -> hybridní klient s p2p komunikací
+    public void setContextByLibrary(int libraryType, boolean isLoadSuccessful, MainActivity activity, Context context) {
+        // vytažení shared preferences
+        if(activity == null) System.out.println("CHYBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        SharedPreferences sharedPref = activity.getSharedPref();
+        SharedPreferences.Editor editor = sharedPref.edit();
+        // pro jistotu v podmínce vše - jinak platí, že bude-li 1 null tak budou i ostatní
+        // pro případ, že přistupujeme k metodě z LibraryLoaderModule při stažení knihovny
+        if(txtAppState == null || btnGetFatOffline == null || btnGetFatP2p == null || btnSlim == null) {
+            txtAppState = (TextView) ((MainActivity) context).findViewById(R.id.txt_conf_state_to_set);
+            btnGetFatOffline = (Button) ((MainActivity) context).findViewById(R.id.btn_getFat_offline);
+            btnGetFatP2p = (Button) ((MainActivity) context).findViewById(R.id.btn_getFat_p2p);
+            btnSlim = (Button) ((MainActivity) context).findViewById(R.id.btn_slim);
+        }
+        switch (libraryType) {
+            case 1:
+                if(isLoadSuccessful) {
+                    // nastavení GUI
+                    setGUI(LIBRARY_FOR_OFFLINE_MODE_CODE);
+                    // nastavení kontextu -> řídící proměnné stavu aplikace
+                    editor.putInt(context.getString(R.string.sh_pref_app_state), libraryType);
+                    activity.setApplicationState(LIBRARY_FOR_OFFLINE_MODE_CODE);
+                    Log.d(TAG, "Úspěšná změna kontextu na tlustého klienta s offline režimem");
+                } else {
+                    Log.e(TAG, "Nepodařilo se změnit kontext na tlusetého klienta s offline režimem");
+                    Toast.makeText(context, "Nepodařilo se změnit kontext na tlusetého klienta s offline režimem",
+                            Toast.LENGTH_LONG).show();
+                }
+                break;
+            case 2:
+                if(isLoadSuccessful) {
+                    // nastavení GUI
+                    setGUI(LIBRARY_FOR_P2P_MODE_CODE);
+                    // nastavení kontextu -> řídící proměnné stavu aplikace
+                    editor.putInt(getContext().getString(R.string.sh_pref_app_state), libraryType);
+                    Log.d(TAG, "Úspěšná změna kontextu na tlustého klienta s offline režimem");
+                } else {
+                    Log.e(TAG, "Nepodařilo se změnit kontext na tlustého klienta s peer-to-peer režimem");
+                    Toast.makeText(getContext(), "Nepodařilo se změnit kontext na tlustého klienta s peer-to-peer režimem",
+                            Toast.LENGTH_LONG).show();
+                }
+                break;
+            case 0:
+                if(isLoadSuccessful) {
+                    // nastavení GUI
+                    setGUI(LIBRARY_FOR_ONLINE_MODE_CODE);
+                    // nastavení kontextu -> řídící proměnné stavu aplikace
+                    editor.putInt(getContext().getString(R.string.sh_pref_app_state), libraryType);
+                    Log.d(TAG, "Úspěšná změna kontextu na tenkého klienta");
+                } else {
+                    Log.e(TAG, "Nepodařilo se změnit kontext na tenkého klienta");
+                    Toast.makeText(getContext(), "Nepodařilo se změnit kontext na tenkého klienta",
+                            Toast.LENGTH_LONG).show();
+                }
+                break;
+        }
+        editor.apply();
+    }
+
+    // metoda pro nastavení GUI dle kontextu aplikace
+    private void setGUI(int libraryType) {
+        switch (libraryType) {
+            case 0:
+                txtAppState.setText(R.string.txt_conf_state_to_set);
+                btnGetFatOffline.setEnabled(true);
+                btnGetFatP2p.setEnabled(true);
+                btnSlim.setEnabled(false);
+                break;
+            case 1:
+                txtAppState.setText("Tlustý klient s offline režimem");
+                btnGetFatOffline.setEnabled(false);
+                btnGetFatP2p.setEnabled(true);
+                btnSlim.setEnabled(true);
+                break;
+            case 2:
+                txtAppState.setText("Tlustý klient s peer-to-peer režimem");
+                btnGetFatOffline.setEnabled(false);
+                btnGetFatP2p.setEnabled(false);
+                btnSlim.setEnabled(true);
+                break;
+        }
+    }
+
+    public static int getLibraryForOfflineModeCode() {
+        return LIBRARY_FOR_OFFLINE_MODE_CODE;
+    }
+
+    public static String[] getLibraryNames() {
+        return libraryNames;
     }
 
     // kompletní proces kontroly stavu, stažení, odzipování a dynamického zavedení knihovny

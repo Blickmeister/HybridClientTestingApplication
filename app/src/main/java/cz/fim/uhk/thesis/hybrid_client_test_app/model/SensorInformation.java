@@ -8,6 +8,11 @@ public class SensorInformation {
 
     private User user;
 
+    public SensorInformation(double temperature, double pressure) {
+        this.temperature = temperature;
+        this.pressure = pressure;
+    }
+
     public double getTemperature() {
         return temperature;
     }

@@ -10,60 +10,79 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
         android:layout_marginEnd="8dp"
+        android:layout_marginBottom="10dp"
         android:textAlignment="center"
         android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/txt_conf_state"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <RadioGroup
-        android:id="@+id/radioGroup_conf"
-        android:layout_width="250dp"
-        android:layout_height="200dp"
-        android:layout_marginStart="205dp"
-        android:layout_marginTop="260dp"
-        android:layout_marginEnd="207dp"
-        android:layout_marginBottom="580dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <TextView
+        android:id="@+id/txt_conf_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="177dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="176dp"
+        android:layout_marginBottom="10dp"
+        android:text="@string/txt_conf_state"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@+id/txt_conf_state_to_set"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="@id/text_conf" />
 
-        <RadioButton
-            android:id="@+id/radio_thin"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/radio_thin" />
+    <TextView
+        android:id="@+id/txt_conf_state_to_set"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="172dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="181dp"
+        android:layout_marginBottom="110dp"
+        android:text="@string/txt_conf_state_to_set"
+        android:textColor="@color/colorAccent"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@+id/txt_conf_manual_conf"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txt_conf_state" />
 
-        <RadioButton
-            android:id="@+id/radio_hybrid_offline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/radio_hybrid_offline" />
 
-        <RadioButton
-            android:id="@+id/radio_hybrid_p2p"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/radio_hybrid_p2p" />
-    </RadioGroup>
+
+    <TextView
+        android:id="@+id/txt_conf_manual_conf"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="163dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="189dp"
+        android:layout_marginBottom="19dp"
+        android:text="@string/txt_conf_manual_conf"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/btn_getFat_offline"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txt_conf_state_to_set" />
 
     <Button
         android:id="@+id/btn_getFat_offline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="159dp"
-        android:layout_marginTop="65dp"
+        android:layout_marginTop="30dp"
         android:layout_marginEnd="164dp"
         android:layout_marginBottom="342dp"
         android:text="@string/btn_getFat_offline"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/radioGroup_conf" />
+        app:layout_constraintTop_toBottomOf="@+id/txt_conf_manual_conf" />
 
     <Button
         android:id="@+id/btn_getFat_p2p"
@@ -84,7 +103,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="165dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="22dp"
         android:layout_marginEnd="159dp"
         android:layout_marginBottom="182dp"
         android:text="@string/btn_slim"
@@ -107,20 +126,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_slim" />
 
-    <TextView
-        android:id="@+id/textView"
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="163dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="189dp"
-        android:layout_marginBottom="19dp"
-        android:text="@string/txt_conf_manual_conf"
-        android:textSize="16sp"
-        android:textColor="@color/black"
-        app:layout_constraintBottom_toTopOf="@+id/btn_getFat_offline"
+        android:layout_marginStart="181dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginEnd="182dp"
+        android:layout_marginBottom="30dp"
+        app:layout_constraintBottom_toTopOf="@+id/txt_conf_manual_conf"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/radioGroup_conf" />
+        app:layout_constraintTop_toBottomOf="@+id/txt_conf_state_to_set" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

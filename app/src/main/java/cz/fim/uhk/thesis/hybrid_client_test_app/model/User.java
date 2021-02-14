@@ -22,6 +22,20 @@ public class User {
 
     private SensorInformation sensorInformation;
 
+    public User(String ssid, double latitude, double longitude, boolean isOnline, String actualState,
+                String futureState, Date firstConnectionToServer, Date lastConnectionToServer,
+                SensorInformation sensorInformation) {
+        this.ssid = ssid;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.isOnline = isOnline;
+        this.actualState = actualState;
+        this.futureState = futureState;
+        this.firstConnectionToServer = firstConnectionToServer;
+        this.lastConnectionToServer = lastConnectionToServer;
+        this.sensorInformation = sensorInformation;
+    }
+
     public String getSsid() {
         return ssid;
     }

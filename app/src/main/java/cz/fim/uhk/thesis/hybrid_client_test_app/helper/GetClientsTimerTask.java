@@ -3,6 +3,7 @@ package cz.fim.uhk.thesis.hybrid_client_test_app.helper;
 import java.util.List;
 import java.util.TimerTask;
 
+import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 import retrofit2.Call;
@@ -14,9 +15,11 @@ public class GetClientsTimerTask extends TimerTask {
     private List<User> clientsFromServer;
     private IsCentralServerApi isCentralServerApi;
     private String alertMessage;
+    private MainActivity mainActivity;
 
-    public GetClientsTimerTask(IsCentralServerApi isCentralServerApi) {
+    public GetClientsTimerTask(IsCentralServerApi isCentralServerApi, MainActivity mainActivity) {
         this.isCentralServerApi = isCentralServerApi;
+        this.mainActivity = mainActivity;
     }
 
     @Override
@@ -45,6 +48,7 @@ public class GetClientsTimerTask extends TimerTask {
 
                 // uložení dat
                 clientsFromServer = response.body();
+                mainActivity.setClients(clientsFromServer);
             }
             // pokud při spojení či zpracování požadavku došlo k chybě
             @Override
