@@ -2,6 +2,7 @@ package cz.fim.uhk.thesis.hybrid_client_test_app;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
@@ -13,47 +14,60 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
-import cz.fim.uhk.thesis.hybrid_client_test_app.helper.GetClientsTimerTask;
+import cz.fim.uhk.thesis.hybrid_client_test_app.task.GetClientsTimerTask;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.database.DatabaseHelper;
-import cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity.LibraryLoaderInterface;
-import cz.fim.uhk.thesis.hybrid_client_test_app.model.SensorInformation;
+import cz.fim.uhk.thesis.hybrid_client_test_app.modularity.LibraryLoaderModule;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
+import cz.fim.uhk.thesis.hybrid_client_test_app.receiver.P2PBroadcastReceiver;
+import cz.fim.uhk.thesis.hybrid_client_test_app.task.SendClientInformationTask;
 import cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration.ConfigurationFragment;
-import dalvik.system.DexClassLoader;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import android.os.Handler;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.Menu;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
-import java.util.TimerTask;
 
+/**
+ *
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Hlavní (řídící) modul
+ */
 public class MainActivity extends AppCompatActivity {
 
-    private final static String TAG = "MainActivity";
+    private final static String TAG = "MainActivity"; // logovací TAG
 
     private AppBarConfiguration mAppBarConfiguration;
+    // seznam klientů v aplikaci
     private List<User> clients;
+    // seznam klientů z offline knihovny
     private List<?> usersFromDB;
-    private List<SensorInformation> sensorInformationList;
+    // kontext klienta
+    private User currentUser;
+    // časovač pro pravidelné úlohy aplikace
     private Timer myTimer;
+    // pro zasílání na server - komponenty komunikačního modulu
     private IsCentralServerApi isCentralServerApi;
+    private SendClientInformationTask sendClientInfoTask;
+    // cesta k umístění knihoven pro jejich zavedení
+    private String dexPathForLibraries;
     // proměnné vyjadřující aktuální stav aplikace:
     // 0 -> tenký klient
     // 1 -> hybridní klient s offline režimem
@@ -61,14 +75,23 @@ public class MainActivity extends AppCompatActivity {
     private int applicationState;
     private SharedPreferences sharedPref;
     // kolekce instancí knihoven
-    private List<Object> libraries = new ArrayList<>();
-    private DatabaseHelper myDb;
-    // název třídy reprezentující klienta v offline knihovně
-    private final static String OFFLINE_LIBRARY_USER_CLASS_NAME = "cz.fim.uhk.thesis.libraryforofflinemode.model.User";
-    // seznamu názvů metod třídy User offline knihovny
-    private final static String[] USER_METHOD_NAMES = {"getSsid", "getLatitude", "getLongitude",
-            "isOnline", "getActualState", "getFutureState", "getFirstConnectionToServer", "getLastConnectionToServer",
-            "getTemperature", "getPressure"};
+    private HashMap<Integer, Object> libraries = new HashMap<>();
+    // pozice knihoven v seznamu knihoven
+    public static final int LIBRARY_FOR_OFFLINE_MODE_POSITION = 0;
+    public static final int LIBRARY_FOR_P2P_MODE_POSITION = 1;
+    // kódy knihoven (pro GUI a kontext aplikace)
+    public static final int LIBRARY_FOR_OFFLINE_MODE_CODE = 1;
+    public static final int LIBRARY_FOR_P2P_SERVER_MODE_CODE = 2;
+    public static final int LIBRARY_FOR_P2P_CLIENT_MODE_CODE = 3;
+    public static final int LIBRARY_FOR_ONLINE_MODE_CODE = 0;
+    // konstanty reprezentující hodnoty módu spuštění p2p knihovny
+    public static final int RUN_P2P_LIBRARY_AS_CLIENT_VALUE = 0;
+    public static final int RUN_P2P_LIBRARY_AS_SERVER_VALUE = 1;
+    public static final int DOWNLOAD_ONLY_P2P_LIBRARY_VALUE = -1;
+    public DatabaseHelper myDb;
+
+    // pro naslouchání výsledků p2p knihovny
+    private final P2PBroadcastReceiver pBroadcastReceiver = new P2PBroadcastReceiver(this);
 
 
     @Override
@@ -93,25 +116,26 @@ public class MainActivity extends AppCompatActivity {
 
         // init a nastavení retrofit objektu pro připojení k serveru
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://10.0.2.2:8080/") // localhost alias pro AVD
+                //.baseUrl("http://10.0.2.2:8080/") // localhost alias pro AVD - TODO ODKOMENTOVAT PRO EMULATOR
+                .baseUrl("http://192.168.100.2:8080/") // localhost pro moji síť - fyzické zařízení
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
 
         // naplnění těl metod prostřednictvím retrofit objektu
         isCentralServerApi = retrofit.create(IsCentralServerApi.class);
-
-        // inicializace sqlite databáze pro správu knihoven v aplikaci
-        myDb = new DatabaseHelper(this);
-        clients = new ArrayList<>();
+        // init třídy pro zaslání informace o klientovi na server
+        sendClientInfoTask = new SendClientInformationTask(isCentralServerApi);
 
         // init shared preferences pro persistentní uložení stavu aplikace
         sharedPref = this.getSharedPreferences(getString(R.string.sh_pref_file_key), Context.MODE_PRIVATE);
 
-        myTimer = new Timer();
+        ContextWrapper contextWrapper = new ContextWrapper(this);
+        dexPathForLibraries = contextWrapper.getFilesDir() + "/" + "libs";
 
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
+        //pBroadcastReceiver = new P2PBroadcastReceiver(this);
+
+        // menu navigace
         mAppBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.nav_conf, R.id.nav_func, R.id.nav_users, R.id.nav_map)
                 .setDrawerLayout(drawer)
@@ -124,26 +148,68 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        // získání stavu aplikace TODO odkomentovat
-        applicationState = sharedPref.getInt(getString(R.string.sh_pref_app_state), 0);
+        // inicializace sqlite databáze pro správu knihoven v aplikaci
+        myDb = new DatabaseHelper(this);
+        clients = new ArrayList<>();
+
+        currentUser = new User(); // objekt reprezentující klienta představujícího tuto aplikaci
+        // kontrola, zda zařízení již má SSID (neběží poprvé)
+        String ssid = sharedPref.getString(getString(R.string.sh_pref_ssid), null);
+        if (ssid == null) {
+            // zaregistrování nového zařízení do systému, běží-li aplikace poprvé
+            //registerNewDevice(); // TODO okdkomentovat a dodelat (server)
+        }
+
+        // získání stavu aplikace
+        applicationState = sharedPref.getInt(getString(R.string.sh_pref_app_state), 0); // TODO odkomentovat
         //applicationState = 0; // TODO pryc
+        Log.d(TAG, "Aplikace běží ve stavu tenkého klienta");
+
+        // stažení p2p knihovny, pokud již není stažena -> vždy by měla být k dispozici v uložišti pro zavedení
+        LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, this, this);
+        String p2pLibraryName = ConfigurationFragment.getLibraryNames()
+                [MainActivity.LIBRARY_FOR_P2P_MODE_POSITION];
+        // není-li knihovna již stažena
+        if (!libraryLoaderModule.isLibraryInDirection(p2pLibraryName)) {
+            // chceme pouze stáhnout, nikoliv zavést -> set proměnné p2pLibraryRole na -1
+            libraryLoaderModule.setP2pLibraryRole(-1);
+            // konstanta pro umístění apk souboru p2p knihovny
+            String P2P_LIBRARY_DEX_PATH = new ContextWrapper(this).getFilesDir() +
+                    "/libs";
+            // stažení p2p knihovny
+            libraryLoaderModule.downloadLibrary(p2pLibraryName, P2P_LIBRARY_DEX_PATH);
+        }
+
         // rozdělení chování aplikace dle jejího aktuálního stavu
         if (applicationState == 0) {
-            Log.d(TAG, "Aplikace běží ve stavu tenkého klienta");
+            /*Log.d(TAG, "Aplikace běží ve stavu tenkého klienta");
+            // stažení p2p knihovny, pokud již není stažena -> vždy by měla být k dispozici v uložišti pro zavedení
+            LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, this, this);
+            String p2pLibraryName = ConfigurationFragment.getLibraryNames()
+                    [MainActivity.LIBRARY_FOR_P2P_SERVER_MODE_POSITION];
+            // není-li knihovna již stažena
+            if (!libraryLoaderModule.isLibraryInDirection(p2pLibraryName)) {
+                // chceme pouze stáhnout, nikoliv zavést -> set proměnné p2pLibraryRole na -1
+                libraryLoaderModule.setP2pLibraryRole(-1);
+                // konstanta pro umístění apk souboru p2p knihovny
+                String P2P_LIBRARY_DEX_PATH = new ContextWrapper(this).getFilesDir() +
+                        "/libs";
+                // stažení p2p knihovny
+                libraryLoaderModule.downloadLibrary(p2pLibraryName, P2P_LIBRARY_DEX_PATH);
+            }*/
+            myTimer = new Timer();
             // opakování volání metody získání seznamu klientů ze serveru každou minutu
             final GetClientsTimerTask getClientsTimerTask = new GetClientsTimerTask(isCentralServerApi, this);
-            myTimer.scheduleAtFixedRate(getClientsTimerTask, 0, 60000);
-            // TODO získání výsledků
+            myTimer.scheduleAtFixedRate(getClientsTimerTask, 0, 60000); // TODO 1 nula pryc -> 60000
+            /*
             myTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
                     //clients = getClientsTimerTask.getClientsFromServer();
-                    String message = getClientsTimerTask.getAlertMessage();
-                    System.out.println("ALERT MESSAGE: " + message);
                 }
-            }, 10, 600000); // TODO 1 nula pryc -> 60000
+            }, 10, 2000000);
             //final TestDataTimerTask testDataTimerTask = new TestDataTimerTask(isCentralServerApi);
-            final Handler handler = new Handler();
+            final Handler handler = new Handler();*/
             // TODO asi chyba ve stacku je new TimerTask(atd)
             /*myTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -194,94 +260,204 @@ public class MainActivity extends AppCompatActivity {
             // získání klientů z DB offline knihovny
             getClientsFromOfflineLibrary();
             // otestování přítomnosti klientů v aplikaci
-            for(User us : clients) {
+            for (User us : clients) {
                 Log.d(TAG, "Uživatel ID: " + us.getSsid());
             }
+        } else if (applicationState == 2) {
+            Log.d(TAG, "Aplikace běží ve stavu tlustého klienta s p2p režimem v roli server");
+            // opět získání klientů z DB offline knihovny
+            getClientsFromOfflineLibrary();
+            // znovuzavedení p2p knihovny v roli serveru
+            startP2PLibrary(RUN_P2P_LIBRARY_AS_SERVER_VALUE);
         } else {
-            Log.d(TAG, "Aplikace běží ve stavu tlustého klienta s p2p režimem");
+            Log.d(TAG, "Aplikace běží ve stavu hybridního klienta s p2p režimem v roli klienta");
+            // znovuzavedení p2p knihovny v roli klienta
+            startP2PLibrary(RUN_P2P_LIBRARY_AS_CLIENT_VALUE);
+
         }
+    }
+
+    // metoda pro zaregistrování nového zařízení do systému (architektury)
+    private void registerNewDevice() {
+            // vygenerování SSID pro identifikaci zařízení - předpona "mk" a IMEI
+            String ssid = "mk";
+            // získání IMEI zařízení
+            TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            String imei = telephonyManager.getDeviceId();
+            // pokud zařízení poskytuje IMEI
+            if (imei != null || imei.length() != 0) {
+                // přidáme IMEI
+                ssid += imei;
+                // uložení ssid zařízení perzistentně
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString(getString(R.string.sh_pref_ssid), ssid);
+                editor.apply();
+            }
+            // jinak SSID generuje server -> zašleme jen "mk"
+            currentUser.setSsid(ssid);
+            // nastavení zbytku inicializačních hodnot
+            currentUser.setActualState("tenky");
+            // možné budoucí stavy klientů pro automatizované přepínání kontextu
+            // stavy oddeleny ; a camel case: stavKlienta1;stavKlienta2
+            // dáno pevně -> šel by dodelat treba Radio Button pro prepinani budoucich stavu
+            // nicméně přepínat kontext lze i pomocí tlačítek v Configuration fragmentu
+            currentUser.setFutureState("offline;p2pServer");
+            //currentUser.setFutureState("p2pClient"); // odkomentovat chceme-li v budoucnu p2p klienta
+            // zaslání na server
+            sendClientInfoTask.sendClientInformationToServer(currentUser);
     }
 
     // metoda pro získání klientů z DB offline knihovny a nastavení seznamu klientů v aplikaci
     private void getClientsFromOfflineLibrary() {
         // získání instance knihovny - persistentní skrz gson nefunguje
         Object offlineLibraryInstance = null;
-        if(!libraries.isEmpty()) {
-            offlineLibraryInstance = libraries.get(ConfigurationFragment.getLibraryForOfflineModeCode());
+        if (!libraries.isEmpty()) {
+            offlineLibraryInstance = libraries.get(LIBRARY_FOR_OFFLINE_MODE_POSITION);
         }
-        // konstanta pro umístění apk souboru offline knihovny
-        String OFFLINE_LIBRARY_DEX_PATH = new ContextWrapper(this).getFilesDir() +
-                "/libs/LibraryForOfflineMode/library_for_offline_mode.apk";
-        // init class loaderu
-        DexClassLoader loader = new DexClassLoader
-                (OFFLINE_LIBRARY_DEX_PATH, null, null, getClassLoader());
+
         // znamená že aplikace byla vypnuta a přitom se nachází ve stavu tlustého klienta
         // je nutné znovu vytáhnout instanci offline knihovny - perzistentní uložení se nepodařilo
-        if(offlineLibraryInstance == null) {
-            Class<?> mainClass = null;
-            try {
-                mainClass = Class.forName(myDb.getClassName("LibraryForOfflineMode"),
-                        true, loader);
-            } catch (ClassNotFoundException e) {
-                Log.e(TAG, "Nepodařilo se nalézt zaváděcí třídu offline knihovny: ");
-                e.printStackTrace();
-            }
-            if(mainClass != null) {
-                try {
-                    offlineLibraryInstance = mainClass.newInstance();
-                } catch (IllegalAccessException | InstantiationException e) {
-                    Log.e(TAG, "Nepodařilo se vytvořit instanci zaváděcí třídy knihovny: ");
-                    e.printStackTrace();
-                }
-            }
-        }
-        // získání klientů z DB offline knihovny
-        Method getUsers = null;
-        int res = -1; // zda se povedlo knihovnu zavést skrze start metodu
-        List<?> usersFromDB = new ArrayList<>();
-        try {
-            if(offlineLibraryInstance != null) {
-                // nejprve je nutné knihovnu znovu zavést skrze metodu start
-                ContextWrapper contextWrapper = new ContextWrapper(this);
-                String dexPath = contextWrapper.getFilesDir() + "/" + "libs";
-                Method start = offlineLibraryInstance.getClass().getMethod("start",
-                        String.class, Context.class);
-                res = (int) start.invoke(offlineLibraryInstance, dexPath, this);
-                // získání klientů z DB
-                getUsers = offlineLibraryInstance.getClass().getMethod("getUsers");
-                usersFromDB = (List<?>) getUsers.invoke(offlineLibraryInstance);
-            }
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            Log.e(TAG, "Nepodařilo se získat seznam klientů z DB offline knihovny");
-            e.getCause().printStackTrace();
-        }
-        if(getUsers != null && !usersFromDB.isEmpty() && res == 0) {
-            // nastavení seznamu klientů v aplikaci
-            setClientsFromUsersInDB(usersFromDB, loader);
-                /*for (User user : clients) {
-                    System.out.println("Useros id: " + user.getSsid() + "Useros lati: " + user.getLatitude());
-                }*/
+        // znovu zavedení knihovny
+        if (offlineLibraryInstance == null) {
+            LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, this, this);
 
-            /*if (usersInOfflineLibrary != null) {
-                    /*List<User> clientsFromServer = activity.getClients();
-                    if(clientsFromServer != null) {
-                        for(User user : clientsFromServer) {
-                            addUser.invoke(libraryInstance, user.getSsid(), user.getLatitude(), user.getLongitude(), user.isOnline(),
-                                    user.getActualState(), user.getFutureState(), user.getFirstConnectionToServer(),
-                                    user.getLastConnectionToServer(), user.getSensorInformation().getTemperature(),
-                                    user.getSensorInformation().getPressure());
-                        }
-                    }
-                    } else {
-                    Log.e(TAG, "Atribut kolekce uživatelů z offline knihovny je null");
-                }*/
+            // znovu zavedení - součástí je i získání klientů z DB a uložení do seznamu klientů v aplikaci
+            int res = libraryLoaderModule.loadClass(dexPathForLibraries, ConfigurationFragment.getLibraryNames()
+                    [LIBRARY_FOR_OFFLINE_MODE_POSITION]);
+            // podařilo se zavést
+            if (res == 0) {
+                Log.d(TAG, "Úspěšné znovuzavedení knihovny pro offline režim");
+            } else {
+                Log.e(TAG, "Neúspěšné znovuzavedení knihovny pro offline režim");
             }
         }
+    }
+
+    // metoda pro znovuzavedení p2p knihovny dle role vykonávání činnosti knihovny
+    private void startP2PLibrary(int mode) {
+        // získání instance knihovny - persistentní skrz gson nefunguje
+        Object p2pLibraryInstance = null;
+        if (!libraries.isEmpty()) {
+            p2pLibraryInstance = libraries.get(LIBRARY_FOR_P2P_MODE_POSITION);
+        }
+        // znovu zavedení knihovny - při restartu aplikace
+        if (p2pLibraryInstance == null) {
+            LibraryLoaderModule libraryLoaderModule = new LibraryLoaderModule(myDb, this, this);
+
+            // nastevení způsobu zavedení knihovny dle role knihovny
+            if (mode == RUN_P2P_LIBRARY_AS_SERVER_VALUE)
+                libraryLoaderModule.setP2pLibraryRole(RUN_P2P_LIBRARY_AS_SERVER_VALUE);
+            else libraryLoaderModule.setP2pLibraryRole(RUN_P2P_LIBRARY_AS_CLIENT_VALUE);
+            // znovu zavedení - součástí i zaregistrování receiveru a intentFilteru
+            int res = libraryLoaderModule.loadClass(dexPathForLibraries, ConfigurationFragment.getLibraryNames()
+                    [LIBRARY_FOR_P2P_MODE_POSITION]);
+            // podařilo se zavést
+            if (res == 0) {
+                // inicializace BroadcastReceiveru a IntentFilteru pro naslouchání zaslání výsledků z p2p knihovny
+                registerP2PBroadcastReceiver();
+                Log.d(TAG, "Úspěšné znovuzavedení knihovny pro p2p režim");
+            } else {
+                Log.e(TAG, "Neúspěšné znovuzavedení knihovny pro p2p režim");
+            }
+        }
+    }
 
     @Override
     protected void onStop() {
         super.onStop();
+        // zrušení Timeru a Receiveru
         myTimer.cancel();
+        if (applicationState == 2 || applicationState == 3) {
+            // API pro BroadcastReceiver neposkytuje metodu typu isRegistered() -> try catch místo toho
+            try {
+                unregisterReceiver(pBroadcastReceiver);
+            } catch (IllegalArgumentException e) {
+                Log.d(TAG, "Receiver již je odregistrovaný");
+            }
+            // zastavení chodu p2p knihovny
+            Object p2pLibraryInstance = libraries.get(LIBRARY_FOR_P2P_MODE_POSITION);
+            if (p2pLibraryInstance != null) {
+                int res = 1;
+                try {
+                    Method stop = p2pLibraryInstance.getClass().getMethod("stop");
+                    res = (int) stop.invoke(p2pLibraryInstance);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    Log.e(TAG, "Nepodařilo se zavolat metodu stop() p2p knihovny: ");
+                    e.printStackTrace();
+                }
+                if (res == 0) {
+                    Log.d(TAG, "Chod 2p2 knihovny úspěšně pozastaven");
+                } else {
+                    Log.e(TAG, "Chod 2p2 knihovny se nepodařilo pozastavit");
+                }
+            }
+        } else if (applicationState == 1) {
+            // zastavení chodu offline knihovny
+            Object offlineLibraryInstance = libraries.get(LIBRARY_FOR_OFFLINE_MODE_POSITION);
+            if (offlineLibraryInstance != null) {
+                int res = 1;
+                try {
+                    Method stop = offlineLibraryInstance.getClass().getMethod("stop");
+                    res = (int) stop.invoke(offlineLibraryInstance);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    Log.e(TAG, "Nepodařilo se zavolat metodu stop() offline knihovny: ");
+                    e.printStackTrace();
+                }
+                if (res == 0) {
+                    Log.d(TAG, "Chod offline knihovny úspěšně pozastaven");
+                } else {
+                    Log.e(TAG, "Chod offline knihovny se nepodařilo pozastavit");
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (applicationState == 2 || applicationState == 3) {
+            // API pro BroadcastReceiver neposkytuje metodu typu isRegistered() -> try catch místo toho
+            try {
+                registerP2PBroadcastReceiver();
+            } catch (IllegalArgumentException e) {
+                Log.d(TAG, "Receiver již je registrovaný");
+            }
+            // znovuspuštění chodu p2p knihovny
+            Object p2pLibraryInstance = libraries.get(LIBRARY_FOR_P2P_MODE_POSITION);
+            if (p2pLibraryInstance != null) {
+                int res = 1;
+                try {
+                    Method start = p2pLibraryInstance.getClass().getMethod("resume");
+                    res = (int) start.invoke(p2pLibraryInstance);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    Log.e(TAG, "Nepodařilo se zavolat metodu start() p2p knihovny: ");
+                    e.printStackTrace();
+                }
+                if (res == 0) {
+                    Log.d(TAG, "Chod 2p2 knihovny úspěšně znovuspuštěn");
+                } else {
+                    Log.e(TAG, "Chod 2p2 knihovny se nepodařilo znovuspustit");
+                }
+            }
+        } else if (applicationState == 1) {
+            // obnovení chodu offline knihovny
+            Object offlineLibraryInstance = libraries.get(LIBRARY_FOR_OFFLINE_MODE_POSITION);
+            if (offlineLibraryInstance != null) {
+                int res = 1;
+                try {
+                    Method start = offlineLibraryInstance.getClass().getMethod("resume");
+                    res = (int) start.invoke(offlineLibraryInstance);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    Log.e(TAG, "Nepodařilo se zavolat metodu start() offline knihovny: ");
+                    e.printStackTrace();
+                }
+                if (res == 0) {
+                    Log.d(TAG, "Chod offline knihovny úspěšně obnoven");
+                } else {
+                    Log.e(TAG, "Chod offline knihovny se nepodařilo obnovit");
+                }
+            }
+        }
     }
 
     @Override
@@ -298,6 +474,22 @@ public class MainActivity extends AppCompatActivity {
                 || super.onSupportNavigateUp();
     }
 
+    public void registerP2PBroadcastReceiver() {
+        if (applicationState == LIBRARY_FOR_P2P_SERVER_MODE_CODE) {
+            IntentFilter intentFilter = new IntentFilter(getString(R.string.receive_client_info_from_p2plibrary_action_name));
+            registerReceiver(pBroadcastReceiver, intentFilter);
+            Log.d(TAG, "Receiver pro naslouchání v roli serveru registrován");
+        } else if (applicationState == LIBRARY_FOR_P2P_CLIENT_MODE_CODE) {
+            Log.d(TAG, "Receiver pro naslouchání v roli klienta registrován");
+            IntentFilter intentFilter = new IntentFilter(getString(R.string.receive_clients_from_p2plibrary_action_name));
+            registerReceiver(pBroadcastReceiver, intentFilter);
+        }
+    }
+
+    public void unregisterP2PBroadcastReceiver() {
+        unregisterReceiver(pBroadcastReceiver);
+    }
+
     public List<User> getClients() {
         return clients;
     }
@@ -306,94 +498,17 @@ public class MainActivity extends AppCompatActivity {
         this.clients = clients;
     }
 
-    // setter pro převod seznamu klientů z DB offline knihovny na seznam klientů v aplikaci
-    public void setClientsFromUsersInDB(List<?> usersFromDB, DexClassLoader loader) {
-        List<User> clientsFromOfflineLibrary = new ArrayList<>();
-        // vytažení třídy reprezentující klienta v offline knihovně pro následné získání metod
-        Class<?> classToLoad = null;
-        try {
-            classToLoad = Class.forName(OFFLINE_LIBRARY_USER_CLASS_NAME, true, loader);
-
-        } catch (ClassNotFoundException e) {
-            Log.e(TAG, "Nepodařilo se nalézt třídu User offline knihovny: ");
-            e.printStackTrace();
-        }
-        // pokud třída User není null - podařilo se ji načíst - jinak nemá cenu pokračovat
-        if (classToLoad != null) {
-            // vytažení všech potřebných metod pro získání atributů klienta - důvod: nelze použít třídu
-            // User v aplikaci -> ačkoliv stejná implementace jiné umístění nelze přetypovat
-            try {
-                Method getId = classToLoad.getMethod(USER_METHOD_NAMES[0]);
-                Method getLatitude = classToLoad.getMethod(USER_METHOD_NAMES[1]);
-                Method getLongitude = classToLoad.getMethod(USER_METHOD_NAMES[2]);
-                Method isOnline = classToLoad.getMethod(USER_METHOD_NAMES[3]);
-                Method getActualState = classToLoad.getMethod(USER_METHOD_NAMES[4]);
-                Method getFutureState = classToLoad.getMethod(USER_METHOD_NAMES[5]);
-                Method getFirstConnectionToServer = classToLoad.getMethod(USER_METHOD_NAMES[6]);
-                Method getLastConnectionToServer = classToLoad.getMethod(USER_METHOD_NAMES[7]);
-                Method getTemperature = classToLoad.getMethod(USER_METHOD_NAMES[8]);
-                Method getPressure = classToLoad.getMethod(USER_METHOD_NAMES[9]);
-
-                // převod seznamu klientů z DB na seznam klientů aplikace
-                for (Object userDB : usersFromDB) {
-                    // získání hodnot atributů 1 klienta z DB
-                    String id = (String) getId.invoke(userDB);
-                    double latitude = (double) getLatitude.invoke(userDB);
-                    double longitude = (double) getLongitude.invoke(userDB);
-                    boolean online = (boolean) isOnline.invoke(userDB);
-                    String actualState = (String) getActualState.invoke(userDB);
-                    String futureState = (String) getFutureState.invoke(userDB);
-                    Date firstConnectionToServer = (Date) getFirstConnectionToServer.invoke(userDB);
-                    Date lastConnectionToServer = (Date) getLastConnectionToServer.invoke(userDB);
-                    double temperature = (double) getTemperature.invoke(userDB);
-                    double pressure = (double) getPressure.invoke(userDB);
-                    // vytvoření User objektu s hodnotami klienta z DB
-                    SensorInformation information = new SensorInformation(temperature, pressure);
-                    User user = new User(id, latitude, longitude, online, actualState, futureState,
-                            firstConnectionToServer, lastConnectionToServer, information);
-                    // vložení klienta do listu
-                    clientsFromOfflineLibrary.add(user);
-                }
-            } catch (NoSuchMethodException e) {
-                Log.e(TAG, "Nepodařilo se nalézt metody třídy User offline knihovny: ");
-                e.printStackTrace();
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                Log.e(TAG, "Nepodařilo se spustit metody na objektu User offline knihovny: ");
-                e.printStackTrace();
-            }
-        }
-        this.clients = clientsFromOfflineLibrary;
-    }
-
-    public List<?> getUsersFromDB() {
-        return usersFromDB;
-    }
-
-    public void setUsersFromDB(List<?> usersFromDB) {
-        this.usersFromDB = usersFromDB;
-    }
-
-    public List<SensorInformation> getSensorInformationList() {
-        return sensorInformationList;
-    }
-
     public IsCentralServerApi getIsCentralServerApi() {
         return isCentralServerApi;
     }
 
-    public int getApplicationState() {
-        return applicationState;
-    }
+    public void setApplicationState(int applicationState) { this.applicationState = applicationState; }
 
-    public void setApplicationState(int applicationState) {
-        this.applicationState = applicationState;
-    }
-
-    public List<Object> getLibraries() {
+    public HashMap<Integer, Object> getLibraries() {
         return libraries;
     }
 
-    public void setLibraries(List<Object> libraries) {
+    public void setLibraries(HashMap<Integer, Object> libraries) {
         this.libraries = libraries;
     }
 
@@ -403,5 +518,13 @@ public class MainActivity extends AppCompatActivity {
 
     public SharedPreferences getSharedPref() {
         return sharedPref;
+    }
+
+    public String getDexPathForLibraries() {
+        return dexPathForLibraries;
+    }
+
+    public void setCurrentUser(User currentUser) {
+        this.currentUser = currentUser;
     }
 }

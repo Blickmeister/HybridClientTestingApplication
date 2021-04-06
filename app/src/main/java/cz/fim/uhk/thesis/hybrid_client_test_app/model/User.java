@@ -1,8 +1,9 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.model;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class User {
+public class User implements Serializable {
 
     private String ssid;
 
@@ -21,6 +22,8 @@ public class User {
     private Date lastConnectionToServer;
 
     private SensorInformation sensorInformation;
+
+    public User() {}
 
     public User(String ssid, double latitude, double longitude, boolean isOnline, String actualState,
                 String futureState, Date firstConnectionToServer, Date lastConnectionToServer,
@@ -70,5 +73,41 @@ public class User {
 
     public SensorInformation getSensorInformation() {
         return sensorInformation;
+    }
+
+    public void setSsid(String ssid) {
+        this.ssid = ssid;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    public void setOnline(boolean online) {
+        isOnline = online;
+    }
+
+    public void setActualState(String actualState) {
+        this.actualState = actualState;
+    }
+
+    public void setFutureState(String futureState) {
+        this.futureState = futureState;
+    }
+
+    public void setFirstConnectionToServer(Date firstConnectionToServer) {
+        this.firstConnectionToServer = firstConnectionToServer;
+    }
+
+    public void setLastConnectionToServer(Date lastConnectionToServer) {
+        this.lastConnectionToServer = lastConnectionToServer;
+    }
+
+    public void setSensorInformation(SensorInformation sensorInformation) {
+        this.sensorInformation = sensorInformation;
     }
 }

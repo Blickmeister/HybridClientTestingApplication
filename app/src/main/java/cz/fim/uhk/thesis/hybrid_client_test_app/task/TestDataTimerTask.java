@@ -1,26 +1,16 @@
-package cz.fim.uhk.thesis.hybrid_client_test_app.helper;
+package cz.fim.uhk.thesis.hybrid_client_test_app.task;
 
-import android.content.Intent;
-import android.os.AsyncTask;
 import android.util.Log;
 
-import org.apache.commons.net.ntp.NTPUDPClient;
-import org.apache.commons.net.ntp.TimeInfo;
-
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayDeque;
-import java.util.Calendar;
 import java.util.Random;
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
 
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
+import cz.fim.uhk.thesis.hybrid_client_test_app.helper.provider.CurrentTimeProvider;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;

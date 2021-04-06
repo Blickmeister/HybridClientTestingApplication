@@ -1,4 +1,4 @@
-package cz.fim.uhk.thesis.hybrid_client_test_app.helper;
+package cz.fim.uhk.thesis.hybrid_client_test_app.helper.provider;
 
 import android.os.AsyncTask;
 import android.util.Log;

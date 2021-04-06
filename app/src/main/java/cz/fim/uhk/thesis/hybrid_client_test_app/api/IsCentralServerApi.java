@@ -10,8 +10,8 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
-import retrofit2.http.Streaming;
 
 public interface IsCentralServerApi {
 
@@ -24,5 +24,13 @@ public interface IsCentralServerApi {
     @Headers("Content-Type: text/plain")
     @POST("connection/test")
     Call<ResponseBody> makeTest(@Body RequestBody body);
+
+    @Headers("Content-Type: application/json")
+    @PUT("users/update")
+    Call<ResponseBody> updateUser(@Body User user);
+
+    @Headers("Content-Type: application/json")
+    @POST("users/create")
+    Call<ResponseBody> createUser(@Body User user);
 
 }

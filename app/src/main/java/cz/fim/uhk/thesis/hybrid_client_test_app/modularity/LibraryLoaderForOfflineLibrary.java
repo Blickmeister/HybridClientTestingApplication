@@ -1,4 +1,4 @@
-package cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity;
+package cz.fim.uhk.thesis.hybrid_client_test_app.modularity;
 
 import java.util.List;
 

@@ -180,4 +180,12 @@ public class SampleFunctionalityFragment extends Fragment {
         }
         return false;
     }
+
+    public float getTemperature() {
+        return temperature;
+    }
+
+    public float getPressure() {
+        return pressure;
+    }
 }

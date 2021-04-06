@@ -1,8 +1,6 @@
-package cz.fim.uhk.thesis.hybrid_client_test_app.helper.modularity;
+package cz.fim.uhk.thesis.hybrid_client_test_app.modularity;
 
 import android.content.Context;
-
-import java.util.List;
 
 public interface LibraryLoaderInterface {
 
@@ -10,7 +8,7 @@ public interface LibraryLoaderInterface {
 
     int stop();
 
-    int resume(List<?> clients);
+    int resume();
 
     int exit();
 

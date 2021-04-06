@@ -1,9 +1,12 @@
-package cz.fim.uhk.thesis.hybrid_client_test_app.helper;
+package cz.fim.uhk.thesis.hybrid_client_test_app.task;
+
+import android.util.Log;
 
 import java.util.List;
 import java.util.TimerTask;
 
 import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
+import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 import retrofit2.Call;
@@ -17,6 +20,8 @@ public class GetClientsTimerTask extends TimerTask {
     private String alertMessage;
     private MainActivity mainActivity;
 
+    private static final String TAG = "GetClientsTimerTask";
+
     public GetClientsTimerTask(IsCentralServerApi isCentralServerApi, MainActivity mainActivity) {
         this.isCentralServerApi = isCentralServerApi;
         this.mainActivity = mainActivity;
@@ -25,7 +30,7 @@ public class GetClientsTimerTask extends TimerTask {
     @Override
     public void run() {
         getClientListFromServer();
-        printAndroidLable();
+        printAndroidLabel();
     }
 
     // metoda pro získání seznamu klientů ze serveru
@@ -48,7 +53,17 @@ public class GetClientsTimerTask extends TimerTask {
 
                 // uložení dat
                 clientsFromServer = response.body();
-                mainActivity.setClients(clientsFromServer);
+                mainActivity.setClients(clientsFromServer); // seznam klientů
+                // tento klient
+                String ssid = mainActivity.getSharedPref().getString(mainActivity
+                        .getString(R.string.sh_pref_ssid), null);
+                if (ssid != null) {
+                    for (User client : clientsFromServer) {
+                        if (client.getSsid().equals(ssid)) {
+                            mainActivity.setCurrentUser(client);
+                        }
+                    }
+                }
             }
             // pokud při spojení či zpracování požadavku došlo k chybě
             @Override
@@ -58,22 +73,14 @@ public class GetClientsTimerTask extends TimerTask {
         });
     }
 
-    public List<User> getClientsFromServer() {
-        return clientsFromServer;
-    }
-
-    public String getAlertMessage() {
-        return alertMessage;
-    }
-
-    private void printAndroidLable() {
-        System.out.println("minuta uběhla");
-        System.out.println("chyba: " + alertMessage);
+    private void printAndroidLabel() {
+        Log.d(TAG, "minuta uběhla");
+        Log.d(TAG, "chyba: " + alertMessage);
         if(clientsFromServer != null) for(User us : clientsFromServer) {
-            System.out.println("userID: " + us.getSsid() + " latitude: " + us.getLatitude() + " longitude: " + us.getLongitude()
+            Log.d(TAG, "userID: " + us.getSsid() + " latitude: " + us.getLatitude() + " longitude: " + us.getLongitude()
             + " act state: " + us.getActualState() + " fut state: " + us.getFutureState() +
                     " first conn: " + us.getFirstConnectionToServer() + " last conn: " + us.getLastConnectionToServer()
-            + " SI SSID: "  + " teplota: " + us.getSensorInformation().getTemperature()
+            + " teplota: " + us.getSensorInformation().getTemperature()
             + " tlak: " + us.getSensorInformation().getPressure() + " isOnline: " + us.isOnline());
         }
     }

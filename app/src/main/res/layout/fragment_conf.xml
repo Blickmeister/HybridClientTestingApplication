@@ -10,9 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="30dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="10dp"
+        android:text="@string/txt_conf"
         android:textAlignment="center"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/txt_conf_state"
@@ -25,7 +26,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="177dp"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="50dp"
         android:layout_marginEnd="176dp"
         android:layout_marginBottom="10dp"
         android:text="@string/txt_conf_state"
@@ -75,9 +76,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="159dp"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="20dp"
         android:layout_marginEnd="164dp"
-        android:layout_marginBottom="342dp"
+        android:layout_marginBottom="330dp"
         android:text="@string/btn_getFat_offline"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -85,18 +86,32 @@
         app:layout_constraintTop_toBottomOf="@+id/txt_conf_manual_conf" />
 
     <Button
-        android:id="@+id/btn_getFat_p2p"
+        android:id="@+id/btn_getFat_p2p_server"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="162dp"
         android:layout_marginTop="32dp"
         android:layout_marginEnd="162dp"
-        android:layout_marginBottom="262dp"
-        android:text="@string/btn_getFat_p2p"
+        android:layout_marginBottom="280dp"
+        android:text="@string/btn_getFat_p2p_server"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_getFat_offline" />
+
+    <Button
+        android:id="@+id/btn_getFat_p2p_client"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="162dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginEnd="162dp"
+        android:layout_marginBottom="210dp"
+        android:text="@string/btn_getFat_p2p_client"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_getFat_p2p_server" />
 
     <Button
         android:id="@+id/btn_slim"
@@ -105,12 +120,12 @@
         android:layout_marginStart="165dp"
         android:layout_marginTop="22dp"
         android:layout_marginEnd="159dp"
-        android:layout_marginBottom="182dp"
+        android:layout_marginBottom="120dp"
         android:text="@string/btn_slim"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btn_getFat_p2p" />
+        app:layout_constraintTop_toBottomOf="@+id/btn_getFat_p2p_client" />
 
     <Button
         android:id="@+id/btn_show_clients"
@@ -119,7 +134,7 @@
         android:layout_marginStart="159dp"
         android:layout_marginTop="40dp"
         android:layout_marginEnd="164dp"
-        android:layout_marginBottom="97dp"
+        android:layout_marginBottom="20dp"
         android:text="@string/btn_show_clients"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

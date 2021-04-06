@@ -1,6 +1,8 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.model;
 
-public class SensorInformation {
+import java.io.Serializable;
+
+public class SensorInformation implements Serializable {
 
     private double temperature;
 
