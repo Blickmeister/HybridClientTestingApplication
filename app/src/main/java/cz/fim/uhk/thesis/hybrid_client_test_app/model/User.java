@@ -3,6 +3,12 @@ package cz.fim.uhk.thesis.hybrid_client_test_app.model;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Modelová třída hybridního klienta (zároveň i klienta v rámci IS)
+ */
 public class User implements Serializable {
 
     private String ssid;

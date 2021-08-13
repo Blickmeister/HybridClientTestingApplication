@@ -12,6 +12,13 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Pomocná třída pro účely modulu vyhodnocení datové propustnosti
+ * konkrétně pro získání aktuálního času z NTP serveru
+ */
 public class CurrentTimeProvider extends AsyncTask<Void, Void, Timestamp> {
 
     private static final String TIME_SERVER = "ntp.nic.cz";
@@ -32,11 +39,9 @@ public class CurrentTimeProvider extends AsyncTask<Void, Void, Timestamp> {
         TimeInfo timeInfo = null;
         try {
             timeClient.open(); // otevřít socket pro komunikaci
-            // pokus o připojení na server (k dispozici více serverů v případě selhání)
-            //for (String timeServer : TIME_SERVERS) {
+            // pokus o připojení na server (více pokusů)
             for (int i = 0; i < 4; i++) {
                 try {
-                    //inetAddress = InetAddress.getByName(timeServer); // získání NTP serveru
                     inetAddress = InetAddress.getByName(TIME_SERVER); // získání NTP serveru
                     timeInfo = timeClient.getTime(inetAddress); // získání času ze serveru
                 } catch (UnknownHostException uhe) {
@@ -46,11 +51,12 @@ public class CurrentTimeProvider extends AsyncTask<Void, Void, Timestamp> {
                 }
                 if (timeInfo != null) {
                     // získáný čas ze serveru
+                    timeClient.close(); // zavřít socket a ukončit komunikaci
                     return new Timestamp(timeInfo.getMessage().getTransmitTimeStamp().getTime());
                 }
             }
         } catch (SocketException se) {
-            Log.d(TAG,"Nepodařilo se socket pro komunikaci s NTP serverem: " + se);
+            Log.d(TAG, "Nepodařilo se socket pro komunikaci s NTP serverem: " + se);
         }
 
         timeClient.close(); // zavřít socket a ukončit komunikaci

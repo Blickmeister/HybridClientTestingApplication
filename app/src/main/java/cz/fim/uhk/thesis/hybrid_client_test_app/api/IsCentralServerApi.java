@@ -11,15 +11,18 @@ import retrofit2.http.GET;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
-import retrofit2.http.Path;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Součást komunikačního modulu
+ * Definice požadavků na centrální server pro knihovnu Retrofit 2
+ */
 public interface IsCentralServerApi {
 
     @GET("users/all")
     Call<List<User>> getUsers();
-
-    @GET("library/download/{name}")
-    Call<ResponseBody> getLibraryByName(@Path("name") String libraryName);
 
     @Headers("Content-Type: text/plain")
     @POST("connection/test")

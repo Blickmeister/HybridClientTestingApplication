@@ -1,14 +1,22 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.task;
 
+import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.Random;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
+import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
+import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.api.IsCentralServerApi;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.provider.CurrentTimeProvider;
 import okhttp3.MediaType;
@@ -18,20 +26,28 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Součást komunikačního modulu
+ * Požadavek zaslání testovacích dat na centrální server
+ * Zároveň modul vyhodnocení datové propustnosti
+ */
 public class TestDataTimerTask extends TimerTask {
 
     // globální a pomocně proměnné
-    private IsCentralServerApi isCentralServerApi;
+    private final IsCentralServerApi isCentralServerApi;
     // kolekce ArrayDeque dle dokumentace rychlejší než LinkedList pro strukturu fronty
-    private ArrayDeque<Long> measurements;
+    private final ArrayDeque<Long> measurements;
     private int stamp;
     private String alertMessage;
-    private int responseCode;
     private String testDataFromServer;
     private Timestamp timestampFromClientToSend;
     private Timestamp timestampFromServerAfterReceive;
     private Timestamp timestampFromServerToSend;
     private Timestamp timestampClientAfterReceive;
+    private final MainActivity mainActivity;
 
     // konstanty
     // povolené znaky v náhodně generovaném řetězci
@@ -39,10 +55,10 @@ public class TestDataTimerTask extends TimerTask {
     private static final String TAG = "MainAct/TestDataTask";
     // TODO zkusit odecist offset nebo neco kdyz je vic serveru tak server vraci jinakci cas nez klient
     //private static final String[] TIME_SERVERS = {"ntp.nic.cz", "tik.cesnet.cz", "lxn.ujf.cas.cz", "ntpm.fit.vutbr.cz"};
-    private static final String TIME_SERVER = "ntp.nic.cz";
 
-    public TestDataTimerTask(IsCentralServerApi isCentralServerApi) {
+    public TestDataTimerTask(IsCentralServerApi isCentralServerApi, MainActivity mainActivity) {
         this.isCentralServerApi = isCentralServerApi;
+        this.mainActivity = mainActivity;
         measurements = new ArrayDeque<>();
     }
 
@@ -56,40 +72,6 @@ public class TestDataTimerTask extends TimerTask {
         return builder.toString();
     }
 
-    // metoda pro získání aktuálního času z NTP serveru (využito Apache Commons Net API)
-   /* private Timestamp getCurrentTime() {
-        NTPUDPClient timeClient = new NTPUDPClient();
-        timeClient.setDefaultTimeout(4000); // pokud se nepodaří připojit po limitu se přestane snažit
-        InetAddress inetAddress;
-        TimeInfo timeInfo = null;
-        try {
-            timeClient.open(); // otevřít socket pro komunikaci
-            // pokus o připojení na server (k dispozici více serverů v případě selhání)
-            //for (String timeServer : TIME_SERVERS) {
-            for (int i = 0; i < 4; i++) {
-                try {
-                    //inetAddress = InetAddress.getByName(timeServer); // získání NTP serveru
-                    inetAddress = InetAddress.getByName(TIME_SERVER); // získání NTP serveru
-                    timeInfo = timeClient.getTime(inetAddress); // získání času ze serveru
-                } catch (UnknownHostException uhe) {
-                    Log.d(TAG, "Adresa NTP serveru je neznámá: " + uhe);
-                } catch (IOException ioe) {
-                    Log.d(TAG, "Nepodařilo se získat čas ze serveru: " + ioe);
-                }
-                if (timeInfo != null) {
-                    // získáný čas ze serveru
-                    return new Timestamp(timeInfo.getMessage().getTransmitTimeStamp().getTime());
-                }
-            }
-        } catch (SocketException se) {
-            Log.d(TAG,"Nepodařilo se socket pro komunikaci s NTP serverem: " + se);
-        }
-
-        timeClient.close(); // zavřít socket a ukončit komunikaci
-        // pokud se nepodaří získat čas ze serveru je použit systémový čas zařízení
-        return new Timestamp(System.currentTimeMillis());
-    }*/
-
     // metoda pro zaslání a získání dat
     private void sendAndReceiveData() {
         String postedData = getRandomString(10); // vygenerování náhodného řetězce
@@ -102,12 +84,11 @@ public class TestDataTimerTask extends TimerTask {
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
-        //Log.d(TAG, "TIMESTAMP FROM CLIENT TO SEND: " + timestampFromClientToSend);
         // přidání časového razítka
         postedData += "/" + timestampFromClientToSend.toString();
 
         // vytvoření objektu requestBody pro odeslání dat na server ve správném formátu
-        RequestBody requestBody = RequestBody.create(MediaType.parse("text/plain"), postedData);
+        RequestBody requestBody = RequestBody.create(postedData, MediaType.parse("text/plain"));
         // request na server
         Call<ResponseBody> call = isCentralServerApi.makeTest(requestBody);
 
@@ -115,7 +96,7 @@ public class TestDataTimerTask extends TimerTask {
         call.enqueue(new Callback<ResponseBody>() {
             // pokud dostaneme response (nemusí být úspěšný)
             @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+            public void onResponse(@NotNull Call<ResponseBody> call, @NotNull Response<ResponseBody> response) {
                 // kontrola zda response je neúspěšný
                 if (!response.isSuccessful()) {
                     // zobrazíme chybový HTTP kód a návrat z metody
@@ -124,43 +105,57 @@ public class TestDataTimerTask extends TimerTask {
                 }
                 // uložení response ze serveru
                 try {
-                    testDataFromServer = response.body().string();
-                    // uložení časového razítka ze serveru
-                    String[] parts = testDataFromServer.split("/");
-                    String stringTimestampAR = parts[2];
-                    timestampFromServerAfterReceive = Timestamp.valueOf(stringTimestampAR);
-                    //Log.d(TAG, "TIMESTAMP FROM SERVER AFTER RECEIVE: " + timestampFromServer.toString());
-                    String stringTimestampTS = parts[3];
-                    timestampFromServerToSend = Timestamp.valueOf(stringTimestampTS);
-                    // aktuální časové razítko pro výpočet download
-                    // je třeba odečíst čas potřebný pro zpracování metody getCurrentTime()
-                    // chceme získat skutečný čas při obdržení datagramu ze serveru
-                    long startTime = System.currentTimeMillis();
-                    // TODO problem getCurrentTime() -> android.os.NetworkOnMainThreadException
-                    Timestamp timestampClientAfterReceiveTmp = null;
-                    CurrentTimeProvider currentTimeProvider = new CurrentTimeProvider();
-                    currentTimeProvider.execute();
-                    try {
-                        timestampClientAfterReceiveTmp = currentTimeProvider.get();
-                    } catch (ExecutionException | InterruptedException e) {
-                        e.printStackTrace();
+                    if (response.body() != null) {
+                        testDataFromServer = response.body().string();
+                        // uložení časového razítka ze serveru
+                        String[] parts = testDataFromServer.split("/");
+                        String stringTimestampAR = parts[2];
+                        timestampFromServerAfterReceive = Timestamp.valueOf(stringTimestampAR);
+                        //Log.d(TAG, "TIMESTAMP FROM SERVER AFTER RECEIVE: " + timestampFromServer.toString());
+                        String stringTimestampTS = parts[3];
+                        timestampFromServerToSend = Timestamp.valueOf(stringTimestampTS);
+                        // aktuální časové razítko pro výpočet download
+                        // je třeba odečíst čas potřebný pro zpracování metody getCurrentTime()
+                        // chceme získat skutečný čas při obdržení datagramu ze serveru
+                        Timestamp timestampClientAfterReceiveTmp = null;
+                        CurrentTimeProvider currentTimeProvider = new CurrentTimeProvider();
+                        //currentTimeProvider.execute();
+                        long startTime = System.nanoTime();
+                        try {
+                            timestampClientAfterReceiveTmp = currentTimeProvider.execute().get();
+                        } catch (ExecutionException | InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        long endTime = System.nanoTime();
+                        long durationInNano = endTime - startTime;
+                        // převod na milisekundy
+                        long duration = TimeUnit.NANOSECONDS.toMillis(durationInNano);
+                        if (timestampClientAfterReceiveTmp != null) {
+                            long milis = timestampClientAfterReceiveTmp.getTime();
+                            //timestampClientAfterReceive = new Timestamp(milis - duration);
+                            timestampClientAfterReceive = new Timestamp(milis);
+                        } else {
+                            Log.e(TAG, "Nepodařilo se získat aktuální čas po obdržení datagramu ze serveru");
+                        }
+                        // fáze vyhodnocení
+                        evaluation();
+                    } else {
+                        Log.e(TAG, "Response body je null");
                     }
-                    long endTime = System.currentTimeMillis();
-                    long duration = endTime - startTime;
-                    long milis = timestampClientAfterReceiveTmp.getTime();
-                    timestampClientAfterReceive = new Timestamp(milis - duration);
-                    //Log.d(TAG, "TIMESTAMP CLIENT AFTER RECEIVE: " + timestampClientAfterReceive);
-
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                responseCode = response.code(); // response code pro debugging
             }
 
             // pokud při spojení či zpracování požadavku došlo k chybě
             @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
+            public void onFailure(@NotNull Call<ResponseBody> call, @NotNull Throwable t) {
                 alertMessage = t.getMessage();
+                Log.e(TAG, "Nepodařilo se připojit k serveru: " + alertMessage);
+                if (t instanceof SocketTimeoutException || t instanceof ConnectException) {
+                    // pokud se nepodaří připojit k serveru -> zvednutí známky
+                    stamp += 1;
+                }
             }
         });
     }
@@ -169,10 +164,10 @@ public class TestDataTimerTask extends TimerTask {
     private long computeConnectionValue() {
         // výpočet upload v milisekundách
         long upload = Math.abs(timestampFromClientToSend.getTime() - timestampFromServerAfterReceive.getTime());
-        System.out.println("upload: " + upload);
+        Log.d(TAG, "upload: " + upload + " millis");
         // výpočet download v milisekundách
         long download = Math.abs((timestampFromServerToSend.getTime() - timestampClientAfterReceive.getTime()));
-        System.out.println("download: " + download);
+        Log.d(TAG, "download: " + download + " millis");
         // součet hodnot pro uložení do fronty
         return upload + download;
     }
@@ -180,20 +175,17 @@ public class TestDataTimerTask extends TimerTask {
     // metoda pro výpočet průměru hodnot měření ve frontě
     private long countMean() {
         long sum = 0;
-        ArrayDeque<Long> tmp = new ArrayDeque<Long>(measurements);
+        ArrayDeque<Long> tmp = new ArrayDeque<>(measurements);
         while (!tmp.isEmpty()) {
             sum += tmp.poll();
         }
         return sum / measurements.size();
     }
 
-    // metoda pro provedení měření
-    public void dataThroughputMeasurement() {
+    // metoda pro vyhodnocení datové propustnosti
+    private void evaluation() {
         long mean;
-        // odeslána testovací data s časovým razítkem klienta a získana data ze serveru s časovým
-        // razítkem serveru
-        sendAndReceiveData();
-        // kontrola zda máme jsme získali časové razítko ze serveru
+        // kontrola zda jsme získali časové razítko ze serveru
         // jinak nemá cenu provádět měření
         if (timestampFromServerAfterReceive != null && timestampFromServerToSend != null) {
             // výpočet download a upload aktuálního měření a jejich součet
@@ -219,25 +211,39 @@ public class TestDataTimerTask extends TimerTask {
             measurements.add(actualConnectionValue);
             Log.d(TAG, "časy: " + timestampFromClientToSend + " "
                     + timestampFromServerAfterReceive + " " + timestampFromServerToSend + " "
-            + timestampClientAfterReceive);
+                    + timestampClientAfterReceive);
+        }
+        Log.d(TAG, "Známka vyhodnocení datové propustnosti: " + stamp);
+        // změna kontextu klienta pokud známka vyhodnocení datové propustnosti přesáhne 20
+        if (stamp >= 20) {
+            // vytažení shared preferences
+            SharedPreferences sharedPref = mainActivity.getSharedPref();
+            SharedPreferences.Editor editor = sharedPref.edit();
+            // podle možného budoucího stavu klienta a stavu aktuálního
+            if (mainActivity.getCurrentUser().getFutureState().contains("offline") &&
+                    sharedPref.getInt(mainActivity.getString(R.string.sh_pref_app_state), 0)
+                            != MainActivity.LIBRARY_FOR_OFFLINE_MODE_CODE) {
+                // změna na klienta v klienta v roli offline režimu
+                editor.putInt(mainActivity.getString(R.string.sh_pref_app_state),
+                        MainActivity.LIBRARY_FOR_OFFLINE_MODE_CODE);
+            } else if (mainActivity.getCurrentUser().getFutureState().contains("p2pClient") &&
+                    sharedPref.getInt(mainActivity.getString(R.string.sh_pref_app_state), 0)
+                            != MainActivity.LIBRARY_FOR_P2P_CLIENT_MODE_CODE) {
+                // změna na klienta na klienta v roli P2P klienta
+                editor.putInt(mainActivity.getString(R.string.sh_pref_app_state),
+                        MainActivity.LIBRARY_FOR_P2P_CLIENT_MODE_CODE);
+            }
+            editor.apply();
+            // refresh Main Activity - zavedení nového kontextu a rekonfigurace aplikace (klienta)
+            mainActivity.recreate();
         }
     }
 
-    public int getStamp() {
-        return stamp;
-    }
-
-    // TODO pokud zustane jen jako test tak do haje i v mainAct a udelat Log.d tady
-    public String getAlertMessage() {
-        return alertMessage;
-    }
-
-    public int getResponseCode() {
-        return responseCode;
-    }
-
-    public String getTestDataFromServer() {
-        return testDataFromServer;
+    // metoda pro provedení měření
+    public void dataThroughputMeasurement() {
+        // odeslána testovací data s časovým razítkem klienta a získana data ze serveru s časovým
+        // razítkem serveru -> zahájení celého procesu vyhodnovení
+        sendAndReceiveData();
     }
 
     @Override

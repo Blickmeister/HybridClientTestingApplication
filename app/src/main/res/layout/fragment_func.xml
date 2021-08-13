@@ -5,141 +5,105 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/text_func"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:textAlignment="center"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/txt_func_sensors_main"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="174dp"
-        android:layout_marginTop="100dp"
-        android:layout_marginEnd="179dp"
-        android:layout_marginBottom="559dp"
+        android:layout_marginStart="177dp"
+        android:layout_marginBottom="560dp"
+        android:layout_marginEnd="176dp"
         android:text="@string/txt_func_sensors_main"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/text_func" />
-
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/txt_func_sensors_temperature"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="25dp"
-        android:layout_marginTop="161dp"
-        android:layout_marginEnd="328dp"
-        android:layout_marginBottom="516dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="510dp"
         android:text="@string/txt_func_sensors_temperature"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/text_func" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Switch
         android:id="@+id/switch_func_temperature"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="73dp"
-        android:layout_marginEnd="216dp"
-        android:layout_marginBottom="467dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="460dp"
         android:text="@string/switch_func"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/txt_func_sensors_main" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/txt_func_temperature_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="60dp"
-        android:layout_marginTop="201dp"
-        android:layout_marginEnd="81dp"
-        android:layout_marginBottom="476dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="460dp"
         android:text="@string/txt_func_temperature_value"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/switch_func_temperature"
-        app:layout_constraintTop_toBottomOf="@+id/text_func" />
+        app:layout_constraintStart_toEndOf="@+id/switch_func_temperature" />
 
     <TextView
         android:id="@+id/txt_func_sensors_pressure"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="42dp"
-        android:layout_marginTop="37dp"
-        android:layout_marginEnd="349dp"
-        android:layout_marginBottom="411dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="400dp"
         android:text="@string/txt_func_sensors_pressure"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switch_func_temperature" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Switch
         android:id="@+id/switch_func_pressure"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="110dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="287dp"
-        android:layout_marginBottom="352dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="360dp"
         android:text="@string/switch_func"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/txt_func_sensors_pressure" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/txt_func_pressure_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="120dp"
-        android:layout_marginTop="101dp"
-        android:layout_marginEnd="147dp"
-        android:layout_marginBottom="355dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="360dp"
         android:text="@string/txt_func_pressure_value"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/switch_func_pressure"
-        app:layout_constraintTop_toBottomOf="@+id/txt_func_temperature_value" />
+        app:layout_constraintStart_toEndOf="@+id/switch_func_pressure" />
 
     <TextView
-        android:id="@+id/textView11"
+        android:id="@+id/txt_func_view_map"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="266dp"
+        android:layout_marginStart="59dp"
+        android:layout_marginEnd="60dp"
+        android:layout_marginBottom="260dp"
         android:text="@string/txt_func_show_map"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switch_func_pressure" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/btn_func_show_map"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="159dp"
-        android:layout_marginTop="62dp"
+        android:layout_marginTop="40dp"
         android:layout_marginEnd="164dp"
-        android:layout_marginBottom="189dp"
+        android:layout_marginBottom="220dp"
         android:text="@string/btn_show_map"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView11" />
+        app:layout_constraintTop_toBottomOf="@+id/txt_func_view_map" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

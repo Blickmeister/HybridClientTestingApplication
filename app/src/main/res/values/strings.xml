@@ -30,6 +30,7 @@
     <string name="txt_users_table_userID">SSID klienta</string>
     <string name="txt_users_table_latitude">Zeměpisná šířka</string>
     <string name="txt_users_table_longitude">Zeměpisná délka</string>
+    <string name="txt_users_table_is_online">Připojen k serveru</string>
     <string name="txt_users_table_actual_state">Aktuální stav</string>
     <string name="txt_users_table_future_state">Možný stav</string>
     <string name="txt_users_table_first_conn">1. připojení k serveru</string>
@@ -42,6 +43,10 @@
     <string name="txt_func_temperature_value">Hodnota teplotního senzoru</string>
     <string name="txt_func_pressure_value">Hodnota tlakového senzoru</string>
     <string name="txt_func_show_map">Zobrazit mapu s hodnotami ostatních uživatelů</string>
+    <string name="txt_conf_state_offline_mode">Tlustý klient s offline režimem</string>
+    <string name="txt_conf_state_p2p_server">Tlustý klient s peer-to-peer režimem v roli serveru</string>
+    <string name="txt_conf_state_p2p_client">Tlustý klient s peer-to-peer režimem v roli klienta</string>
+    <string name="txt_user_no_client">Žádný klient k zobrazení</string>
 
     <string name="switch_func">Zapnout/Vypnout:</string>
 

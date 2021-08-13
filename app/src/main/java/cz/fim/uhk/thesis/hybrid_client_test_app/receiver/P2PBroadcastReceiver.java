@@ -2,7 +2,6 @@ package cz.fim.uhk.thesis.hybrid_client_test_app.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.Intent;
 import android.util.Log;
 import android.widget.Toast;
@@ -15,14 +14,22 @@ import cz.fim.uhk.thesis.hybrid_client_test_app.helper.converter.ByteArrayConver
 import cz.fim.uhk.thesis.hybrid_client_test_app.modularity.LibraryLoaderModule;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 import cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration.ConfigurationFragment;
-import dalvik.system.DexClassLoader;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Receiver pro naslouchání knihovně pro peer-to-peer komunikaci
+ * Pro předávání zpráv z p2p knihovny do prostředí hybridního klienta
+ */
 public class P2PBroadcastReceiver extends BroadcastReceiver {
-    private MainActivity mainActivity;
+    private final MainActivity mainActivity;
 
     private static final String TAG = "P2PBroadcastReceiver";
 
-    public P2PBroadcastReceiver(MainActivity mainActivity) { this.mainActivity = mainActivity; }
+    public P2PBroadcastReceiver(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -40,16 +47,18 @@ public class P2PBroadcastReceiver extends BroadcastReceiver {
             // uložení nového seznamu klientů - nikoliv ze serveru, ale z okolního peer zařízení v roli serveru
             if (clients != null && !clients.isEmpty()) mainActivity.setClients(clients);
             // pro kontrolu vypsaní seznamu klientů získaných z peer zařízení
-            for (User us : clients) {
-                Log.d(TAG, "Klient ID z p2p serveru: " + us.getSsid());
+            if (clients != null) {
+                for (User us : clients) {
+                    Log.d(TAG, "Klient ID z p2p serveru: " + us.getSsid());
+                }
             }
             Toast.makeText(context, "Data ze p2p serveru úspěšně obdržena", Toast.LENGTH_SHORT)
                     .show();
         } else if (mainActivity.getString(R.string.receive_client_info_from_p2plibrary_action_name)
                 .equals(intent.getAction())) {
-            Log.d(TAG, "obdržení zprávy od p2p klienta");
             // pokud nastala událost obdržení výsledku p2p knihovny v roli serveru
             // tedy obdržení kontextu klienta - zařízení (peer)
+            Log.d(TAG, "obdržení zprávy od p2p klienta");
             // získání výsledků z Extra objektu
             byte[] result = intent.getByteArrayExtra(mainActivity
                     .getString(R.string.receive_client_info_from_p2plibrary_extra_name));

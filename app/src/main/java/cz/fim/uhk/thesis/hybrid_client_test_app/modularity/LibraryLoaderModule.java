@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -16,7 +17,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,6 +32,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
+import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.converter.ByteArrayConverter;
 import cz.fim.uhk.thesis.hybrid_client_test_app.helper.database.DatabaseHelper;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.SensorInformation;
@@ -39,11 +40,18 @@ import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 import cz.fim.uhk.thesis.hybrid_client_test_app.ui.configuration.ConfigurationFragment;
 import dalvik.system.DexClassLoader;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Modul pro dynamické zavádění externích knihoven
+ */
 public class LibraryLoaderModule {
 
     private static final String TAG = "LibraryLoaderModule";
-    //private static final String libraryDownloadUrl = "http://10.0.2.2:8080/library/download/"; // TODO odkomentovat
-    private static final String libraryDownloadUrl = "http://192.168.100.2:8080/library/download/";
+    // localhost alias pro AVD - TODO ODKOMENTOVAT PRO EMULATOR
+    private static final String libraryDownloadUrl = "http://10.0.2.2:8080/library/download/";
+    //private static final String libraryDownloadUrl = "http://192.168.2.111:8080/library/download/";
     // název třídy reprezentující klienta v offline knihovně
     private final static String OFFLINE_LIBRARY_USER_CLASS_NAME = "cz.fim.uhk.thesis.libraryforofflinemode.model.User";
     // seznamu názvů metod třídy User offline knihovny
@@ -51,9 +59,9 @@ public class LibraryLoaderModule {
             "isOnline", "getActualState", "getFutureState", "getFirstConnectionToServer", "getLastConnectionToServer",
             "getTemperature", "getPressure"};
 
-    private DatabaseHelper myDb;
-    private Context activityContext;
-    private MainActivity activity;
+    private final DatabaseHelper myDb;
+    private final Context activityContext;
+    private final MainActivity activity;
     private DexClassLoader loader;
     private int p2pLibraryRole;
 
@@ -112,13 +120,7 @@ public class LibraryLoaderModule {
     // je nezávislá na procesu zavedení v případě, kdy není nutné knihovnu stahovat
     @SuppressLint("StaticFieldLeak")
     public void downloadLibrary(final String libraryName, final String dexPath) {
-        // MainActivity mainActivity = (MainActivity) getActivity();
         // vytvoření nového vlákna pro připojení k serveru pomocí instance AsyncTask
-        /*try {
-            activity.wait();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
         try {
             new AsyncTask<Void, Void, Void>() {
                 @Override
@@ -181,7 +183,7 @@ public class LibraryLoaderModule {
                             // pokud se podaří zavést offline knihovnu
                             if (libraryName.equals(ConfigurationFragment.getLibraryNames()
                                     [MainActivity.LIBRARY_FOR_OFFLINE_MODE_POSITION])) {
-                                Log.d(TAG, "fakci to!!");
+                                Log.d(TAG, "knihovna úspěšně stažena");
                                 confFragment.setContextByLibrary(MainActivity.LIBRARY_FOR_OFFLINE_MODE_CODE,
                                         true, activity, activityContext);
 
@@ -189,7 +191,7 @@ public class LibraryLoaderModule {
                                     [MainActivity.LIBRARY_FOR_P2P_MODE_POSITION])
                                     && p2pLibraryRole == MainActivity.RUN_P2P_LIBRARY_AS_SERVER_VALUE) {
                                 // pokud se podaří zavést p2p knihovnu v roli serveru
-                                Log.d(TAG, "fakci to!!");
+                                Log.d(TAG, "knihovna úspěšně stažena");
                                 confFragment.setContextByLibrary(MainActivity.LIBRARY_FOR_P2P_SERVER_MODE_CODE,
                                         true, activity, activityContext);
 
@@ -197,7 +199,7 @@ public class LibraryLoaderModule {
                                     [MainActivity.LIBRARY_FOR_P2P_MODE_POSITION])
                                     && p2pLibraryRole == MainActivity.RUN_P2P_LIBRARY_AS_CLIENT_VALUE) {
                                 // pokud se podaří zavést p2p knihovnu v roli klienta
-                                Log.d(TAG, "fakci to!!");
+                                Log.d(TAG, "knihovna úspěšně stažena");
                                 confFragment.setContextByLibrary(MainActivity.LIBRARY_FOR_P2P_CLIENT_MODE_CODE,
                                         true, activity, activityContext);
                             }
@@ -235,9 +237,7 @@ public class LibraryLoaderModule {
     }
 
     private boolean unpackZip(DataInputStream body, String path) throws IOException {
-        InputStream is = body;
-        ZipInputStream zis = new ZipInputStream(new BufferedInputStream(is));
-        ;
+        ZipInputStream zis = new ZipInputStream(new BufferedInputStream(body));
         boolean mkdirsSuccess = false;
         try {
             ZipEntry ze;
@@ -247,18 +247,15 @@ public class LibraryLoaderModule {
             while ((ze = zis.getNextEntry()) != null) {
                 File file = new File(path, ze.getName());
                 File dir = ze.isDirectory() ? file : file.getParentFile();
-                if (!dir.isDirectory() && !dir.mkdirs())
+                if (dir != null && !dir.isDirectory() && !dir.mkdirs())
                     throw new FileNotFoundException("Failed to ensure directory" + dir.getAbsolutePath());
                 if (ze.isDirectory()) continue;
                 mkdirsSuccess = true;
-                FileOutputStream fout = new FileOutputStream(file);
 
-                try {
+                try (FileOutputStream fout = new FileOutputStream(file)) {
                     while ((count = zis.read(buffer)) != -1) {
                         fout.write(buffer, 0, count);
                     }
-                } finally {
-                    fout.close();
                 }
             }
         } finally {
@@ -271,7 +268,7 @@ public class LibraryLoaderModule {
         List<String> data = new ArrayList<>();
         // získání dat z txt
         String pathToFile = dexPath + "/" + libraryName + "/" + "descriptor.txt";
-        Scanner myReader = null;
+        Scanner myReader;
         try {
             myReader = new Scanner(new File(pathToFile));
         } catch (FileNotFoundException e) {
@@ -285,8 +282,7 @@ public class LibraryLoaderModule {
             data.add(split[1]);
         }
         // uložení informací do db
-        myDb.insertData(libraryName, data.get(1), data.get(3), data.get(4));
-        return true;
+        return myDb.insertData(libraryName, data.get(1), data.get(3), data.get(4));
     }
 
     // metoda pro zavedení knihovny resp. její spouštěcí třídy
@@ -298,7 +294,7 @@ public class LibraryLoaderModule {
         loader = new DexClassLoader
                 (completePath, dexPath, null, activity.getClass().getClassLoader());
         // načtení hlavní třídy knihovny
-        Class<?> classToLoad = null;
+        Class<?> classToLoad;
         try {
             classToLoad = Class.forName(myDb.getClassName(libraryName), true, loader);
 
@@ -338,26 +334,7 @@ public class LibraryLoaderModule {
                 // v případě nasazení p2p knihovny potřeba nejprve incializovat stav knihovny
                 if (libraryName.equals(ConfigurationFragment.getLibraryNames()
                         [MainActivity.LIBRARY_FOR_P2P_MODE_POSITION])) {
-                    // metoda pro init p2p knihovny
-                    Method initialize = libraryInstance.getClass().getMethod("initialize",
-                            Activity.class, int.class, byte[].class);
-                    // pokud chceme nasadit knihovnu v režimu serveru
-                    if (p2pLibraryRole == MainActivity.RUN_P2P_LIBRARY_AS_SERVER_VALUE) {
-                        // převod seznamu klientů v aplikaci do byte[]
-                        byte[] clientsToSend = ByteArrayConverter.userListToByteArray(activity.getClients());
-                        // předání dat
-                        initialize.invoke(libraryInstance, activity, MainActivity.RUN_P2P_LIBRARY_AS_SERVER_VALUE, clientsToSend);
-                    } else {
-                        // převod dat klienta v aplikaci do byte[]
-                        // TODO zatim testovaci klient, pak vzit klienta ze seznamu klientu dle SSID ulozeneho asi v sh pref
-                        if (activity.getClients() != null || activity.getClients().size() > 0) {
-                            byte[] clientContextToSend = ByteArrayConverter.clientContextToByteArray(new User("ssid", 12, 12,
-                                    true, "tenky", "tenky", new Date(), new Date(), new SensorInformation(10,10)));
-                            initialize.invoke(libraryInstance, activity, MainActivity.RUN_P2P_LIBRARY_AS_CLIENT_VALUE, clientContextToSend);
-                        } else {
-                            Log.d(TAG, "Zavedení p2p knihovny - role klient: Seznam klientů je null nebo prázdný");
-                        }
-                    }
+                    initializeStartOfP2PLibrary(p2pLibraryRole, libraryInstance);
                 }
 
                 // zavedení knihovny
@@ -400,6 +377,7 @@ public class LibraryLoaderModule {
         return returnedState;
     }
 
+    // metoda pro předání seznamu klientů z prostředí hybridního klienta (z centrálního serveru) do DB v offline knihovně
     public int addUsersToDB(Object libraryInstance, List<User> usersToAdd) {
         int returnedState = 1;
         try {
@@ -410,11 +388,18 @@ public class LibraryLoaderModule {
 
             if (usersToAdd != null) {
                 for (User user : usersToAdd) {
-                    returnedState = (int) addUser.invoke(libraryInstance, user.getSsid(),
-                            user.getLatitude(), user.getLongitude(), user.isOnline(),
-                            user.getActualState(), user.getFutureState(), user.getFirstConnectionToServer(),
-                            user.getLastConnectionToServer(), user.getSensorInformation().getTemperature(),
-                            user.getSensorInformation().getPressure());
+                    if (user.getSensorInformation() != null) {
+                        returnedState = (int) addUser.invoke(libraryInstance, user.getSsid(),
+                                user.getLatitude(), user.getLongitude(), user.isOnline(),
+                                user.getActualState(), user.getFutureState(), user.getFirstConnectionToServer(),
+                                user.getLastConnectionToServer(), user.getSensorInformation().getTemperature(),
+                                user.getSensorInformation().getPressure());
+                    } else {
+                        returnedState = (int) addUser.invoke(libraryInstance, user.getSsid(),
+                                user.getLatitude(), user.getLongitude(), user.isOnline(),
+                                user.getActualState(), user.getFutureState(), user.getFirstConnectionToServer(),
+                                user.getLastConnectionToServer(), 0.0, 0.0);
+                    }
                     if (returnedState != 0) {
                         Log.e(TAG, "Vyskytla se chyba v předvávání klientů ze serveru do DB offline knihovny");
                         return returnedState;
@@ -429,7 +414,7 @@ public class LibraryLoaderModule {
             return returnedState;
         } catch (IllegalAccessException | InvocationTargetException ex) {
             Log.e(TAG, "Nepodařilo se předat seznam klientů do offline knihovny: ");
-            ex.getCause().printStackTrace();
+            if (ex.getCause() != null) ex.getCause().printStackTrace();
             return returnedState;
         }
         return returnedState;
@@ -446,9 +431,9 @@ public class LibraryLoaderModule {
             usersFromDB = (List<?>) getUsers.invoke(libraryInstance);
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             Log.e(TAG, "Nepodařilo se získat seznam klientů z DB offline knihovny");
-            e.getCause().printStackTrace();
+            if (e.getCause() != null) e.getCause().printStackTrace();
         }
-        if (getUsers != null && !usersFromDB.isEmpty()) {
+        if (getUsers != null && usersFromDB != null && !usersFromDB.isEmpty()) {
             setClientsFromUsersInDB(usersFromDB);
         }
     }
@@ -500,6 +485,14 @@ public class LibraryLoaderModule {
                             firstConnectionToServer, lastConnectionToServer, information);
                     // vložení klienta do listu
                     clientsFromOfflineLibrary.add(user);
+                    // nastavení časů připojení k serveru akutálnímu klientovi
+                    SharedPreferences sharedPref = activity.getSharedPref();
+                    String currentClientId = sharedPref.getString(activity.getString(R.string.sh_pref_ssid),
+                            null);
+                    if (id != null && id.equals(currentClientId)) {
+                        activity.getCurrentUser().setFirstConnectionToServer(firstConnectionToServer);
+                        activity.getCurrentUser().setLastConnectionToServer(lastConnectionToServer);
+                    }
                 }
             } catch (NoSuchMethodException e) {
                 Log.e(TAG, "Nepodařilo se nalézt metody třídy User offline knihovny: ");
@@ -512,9 +505,50 @@ public class LibraryLoaderModule {
         activity.setClients(clientsFromOfflineLibrary);
     }
 
-    // setter pro DexClassLoader v případě, že není volána metoda loadClass() - využito v P2PBroadcastReceiveru
-    public void setLoader(DexClassLoader loader) {
-        this.loader = loader;
+    // metoda pro nastavení nezbytných parametrů před spouštěním chodu p2p knihovny
+    public void initializeStartOfP2PLibrary(int role, Object libraryInstance) {
+        // metoda pro init p2p knihovny
+        try {
+            Method initialize = libraryInstance.getClass().getMethod("initialize",
+                    Activity.class, int.class, byte[].class);
+            // pokud chceme nasadit knihovnu v režimu serveru
+            if (role == MainActivity.RUN_P2P_LIBRARY_AS_SERVER_VALUE) {
+                if (activity.getClients() != null && activity.getClients().size() > 0) {
+                    // převod seznamu klientů v aplikaci do byte[]
+                    byte[] clientsToSend = ByteArrayConverter.userListToByteArray(activity.getClients());
+                    // předání dat
+                    initialize.invoke(libraryInstance, activity, MainActivity.RUN_P2P_LIBRARY_AS_SERVER_VALUE, clientsToSend);
+                } else {
+                    Log.d(TAG, "Zavedení p2p knihovny - role klient: Seznam klientů je prázdný");
+                }
+                // pokud chceme nasadit knihovnu v režimu klienta
+            } else {
+                // převod dat klienta v aplikaci do byte[]
+                if (activity.getCurrentUser() != null) {
+                    User currUser = activity.getCurrentUser();
+                    SensorInformation currSensorInfo = currUser.getSensorInformation();
+                    byte[] clientContextToSend;
+                    if (currSensorInfo != null) {
+                        clientContextToSend = ByteArrayConverter.clientContextToByteArray(new User(currUser.getSsid(),
+                                currUser.getLatitude(), currUser.getLongitude(),
+                                false, "p2pClient", currUser.getFutureState(),
+                                currUser.getFirstConnectionToServer(), currUser.getLastConnectionToServer(),
+                                new SensorInformation(currSensorInfo.getTemperature(), currSensorInfo.getPressure())));
+                    } else {
+                        clientContextToSend = ByteArrayConverter.clientContextToByteArray(new User(currUser.getSsid(),
+                                currUser.getLatitude(), currUser.getLongitude(),
+                                false, "p2pClient", currUser.getFutureState(),
+                                currUser.getFirstConnectionToServer(), currUser.getLastConnectionToServer(),
+                                new SensorInformation(0, 0)));
+                    }
+                    initialize.invoke(libraryInstance, activity, MainActivity.RUN_P2P_LIBRARY_AS_CLIENT_VALUE, clientContextToSend);
+                } else {
+                    Log.d(TAG, "Zavedení p2p knihovny - role klient: Žádná data o aktuálním klientovi");
+                }
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            Log.e(TAG, "Nepodařilo se načíst metodu pro inicializaci chodu p2p knihovny: " + e.getMessage());
+        }
     }
 
     // nastavení role zavedení p2p knihovny

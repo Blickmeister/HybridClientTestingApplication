@@ -22,6 +22,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import java.util.List;
+import java.util.Objects;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,12 +33,17 @@ import cz.fim.uhk.thesis.hybrid_client_test_app.MainActivity;
 import cz.fim.uhk.thesis.hybrid_client_test_app.R;
 import cz.fim.uhk.thesis.hybrid_client_test_app.model.User;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Submodul hlavního (řídícího) modulu pro funkce IS, konrétně vykreslení mapy s ostatními klienty
+ */
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // globální a pomocné proměnné
     private GoogleMap map;
     private boolean locationPermissionGranted = false;
-    private FusedLocationProviderClient locationProviderClient;
 
     // konstanty
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
@@ -48,9 +54,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View root = inflater.inflate(R.layout.fragment_map, container, false);
-
-        return root;
+        return inflater.inflate(R.layout.fragment_map, container, false);
     }
 
     @Override
@@ -64,7 +68,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void getLocationPermission() {
         String[] locationPermission = {Manifest.permission.ACCESS_FINE_LOCATION};
 
-        if (ContextCompat.checkSelfPermission(getActivity().getApplicationContext(),
+        if (ContextCompat.checkSelfPermission(Objects.requireNonNull(getActivity()).getApplicationContext(),
                 FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             // povolení již bylo uděleno
             locationPermissionGranted = true;
@@ -82,20 +86,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         locationPermissionGranted = false;
 
         // kontrola výsledku zažádání o povolení
-        switch (requestCode) {
-            case LOCATION_PERMISSION_REQUEST_CODE: {
-                if (grantResults.length > 0) {
-                    // cyklus pro případ zvýšení počtu povolení (v tuhle chvíli pouze jedno)
-                    for (int i = 0; i < grantResults.length; i++) {
-                        if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                            locationPermissionGranted = false;
-                            return;
-                        }
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0) {
+                // cyklus pro případ zvýšení počtu povolení (v tuhle chvíli pouze jedno)
+                for (int grantResult : grantResults) {
+                    if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                        return;
                     }
-                    // vše v pořádku lze načíst mapu
-                    locationPermissionGranted = true;
-                    initMap();
                 }
+                // vše v pořádku lze načíst mapu
+                locationPermissionGranted = true;
+                initMap();
             }
         }
     }
@@ -105,7 +106,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         SupportMapFragment mapFragment = (SupportMapFragment) this
                 .getChildFragmentManager()
                 .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        if (mapFragment != null) mapFragment.getMapAsync(this);
     }
 
     // metoda rozhraní OnMapReadyCallback při načtení map
@@ -119,7 +120,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // získání polohy
         if (locationPermissionGranted) {
             getDeviceLocation();
-            if (ActivityCompat.checkSelfPermission(getContext(),
+            if (getContext() != null && ActivityCompat.checkSelfPermission(getContext(),
                     Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
@@ -128,17 +129,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         // vytvoření markerů všech ostatních uživatelů
         MainActivity mainActivity = (MainActivity) getActivity();
-        List<User> users = mainActivity.getClients();
+        List<User> users = null;
+        if (mainActivity != null) users = mainActivity.getClients();
 
         if (users != null) {
             for (User user : users) {
+                System.out.println("USER FOR VIEW: " + user.getSsid());
                 // chceme zobrazit jen uživatele s informací ze senzorů
-                if(user.getSensorInformation() != null) {
+                if (user.getSensorInformation() != null) {
+                    System.out.println("LAT VAL: " + user.getLatitude());
                     map.addMarker(new MarkerOptions()
                             .position(new LatLng(user.getLatitude(), user.getLongitude()))
                             .title(user.getSsid())
-                            .snippet("Teplota: " + user.getSensorInformation().getTemperature() + " °C "
-                                    + " Tlak: " + user.getSensorInformation().getPressure() + " hPa"));
+                            .snippet("Teplota: " + Math.round(user.getSensorInformation().getTemperature() * 100.0) / 100.0 + " °C "
+                                    + " Tlak: " + Math.round(user.getSensorInformation().getPressure() * 100.0) / 100.0 + " hPa"));
                 }
             }
         }
@@ -146,7 +150,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     // metoda pro získání aktuální pozice zařízení
     private void getDeviceLocation() {
-        locationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        FusedLocationProviderClient locationProviderClient = LocationServices
+                .getFusedLocationProviderClient(Objects.requireNonNull(getActivity()));
 
         try {
             if (locationPermissionGranted) {
@@ -160,18 +165,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             Log.d(TAG, "Pozice úspěšně nalezena");
                             // uložení pozice
                             Location currentLocation = (Location) task.getResult();
-                            // přidání markeru s pozicí včetně dat získaných ze senzorů
-                            float temperature = getArguments().getFloat("temperatureValue");
-                            float pressure = getArguments().getFloat("pressureValue");
-                            map.addMarker(new MarkerOptions()
-                                    .position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
-                                    .title("My SSID")
-                                    .snippet("Teplota: " + temperature + " °C " + " Tlak: " + pressure + " hPa"));
-
-                            // zoom kamery na aktuální pozici
-                            moveCamera(new LatLng(currentLocation.getLatitude(),
-                                            currentLocation.getLongitude()),
-                                    DEFAULT_ZOOM);
+                            if (currentLocation != null) {
+                                // uložení pozice do objektu aktuálního hybridního klienta
+                                // mohlo by být již v MainActivity při startu, nicméně předpokládá se,
+                                // že každý uživatel si funkce aplikace nejprve vyzkouší, čímž se doplní
+                                // zbylé důležité údaje pro fungování konceptu hybridního klienta (a IS)
+                                // především tedy poloha klienta
+                                MainActivity mainActivity = (MainActivity) getActivity();
+                                if (mainActivity != null) {
+                                    mainActivity.getCurrentUser().setLatitude(currentLocation.getLatitude());
+                                    mainActivity.getCurrentUser().setLongitude(currentLocation.getLongitude());
+                                } else {
+                                    Log.e(TAG, "Instance MainActivity je null");
+                                }
+                                // přidání markeru s pozicí včetně dat získaných ze senzorů
+                                if (getArguments() != null) {
+                                    float temperature = getArguments().getFloat("temperatureValue");
+                                    float pressure = getArguments().getFloat("pressureValue");
+                                    map.addMarker(new MarkerOptions()
+                                            .position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
+                                            .title("My SSID")
+                                            .snippet("Teplota: " + temperature + " °C " + " Tlak: " + pressure + " hPa"));
+                                } else {
+                                    Log.e(TAG, "Předané argumenty v Bundle objektu jsou null");
+                                }
+                                // zoom kamery na aktuální pozici
+                                moveCamera(new LatLng(currentLocation.getLatitude(),
+                                        currentLocation.getLongitude())
+                                );
+                            } else {
+                                // v emulátoru často nutné nejprve získat polohu třeba skrze aplikaci Google Maps
+                                Log.e(TAG, "Nepodařilo se získat aktuální polohu");
+                            }
                         } else {
                             Log.d(TAG, "Aktuální pozice je null");
                             Toast.makeText(getContext(), "Nelze získat aktuální pozici",
@@ -187,7 +212,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     // metoda pro zaměření kamery na danou pozici
-    private void moveCamera(LatLng latLng, float zoom) {
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+    private void moveCamera(LatLng latLng) {
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, MapFragment.DEFAULT_ZOOM));
     }
 }

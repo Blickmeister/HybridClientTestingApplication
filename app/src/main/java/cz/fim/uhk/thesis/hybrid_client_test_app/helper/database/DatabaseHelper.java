@@ -1,5 +1,6 @@
 package cz.fim.uhk.thesis.hybrid_client_test_app.helper.database;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -8,6 +9,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import androidx.annotation.Nullable;
 
+/**
+ * @author Bc. Ondřej Schneider - FIM UHK
+ * @version 1.0
+ * @since 2021-04-06
+ * Databázový modul
+ */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "library_management.db";
@@ -32,6 +39,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    // metoda pro vložení knihovny do DB
     public boolean insertData(String name, String apkName, String mainClass, String description) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
@@ -39,26 +47,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         contentValues.put("library_apk_name", apkName);
         contentValues.put("library_main_class", mainClass);
         contentValues.put("library_desc", description);
-        long result = db.insert(TABLE_NAME,null ,contentValues);
+        long result = db.insert(TABLE_NAME, null, contentValues);
         return result != -1;
     }
 
+    // metoda pro získání všech knihovev v DB
     public Cursor getAllData() {
         SQLiteDatabase db = this.getWritableDatabase();
-        return db.rawQuery("select * from " + TABLE_NAME,null);
+        return db.rawQuery("select * from " + TABLE_NAME, null);
     }
 
+    // metoda pro získání názvu apk souboru z DB  pro zavedení knihovny
     public String getApkName(String libraryName) {
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor res = db.rawQuery("select * from " + TABLE_NAME + " where library_name = '"+ libraryName + "'",
+        @SuppressLint("Recycle") // kvůli nezavření objektu Cursor -> tady není možné
+                Cursor res = db.rawQuery("select * from " + TABLE_NAME + " where library_name = '" + libraryName + "'",
                 null);
         res.moveToFirst(); // library_name je unikátní (vždy jen jeden výsledek)
         return res.getString(2);
     }
 
+    // metoda pro získání názvu hlavní třídy knihovny z DB pro zavedení knihovny
     public String getClassName(String libraryName) {
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor res = db.rawQuery("select * from " + TABLE_NAME + " where library_name = '"+ libraryName + "'",
+        @SuppressLint("Recycle")
+        Cursor res = db.rawQuery("select * from " + TABLE_NAME + " where library_name = '" + libraryName + "'",
                 null);
         res.moveToFirst(); // library_name je unikátní (vždy jen jeden výsledek)
         return res.getString(3);

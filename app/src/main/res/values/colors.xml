@@ -4,4 +4,6 @@
     <color name="colorPrimaryDark">#00574B</color>
     <color name="colorAccent">#D81B60</color>
     <color name="black">#000000</color>
+    <color name="colorTableHeader">#33C7FF</color>
+    <color name="colorTableBody">#33F3FF</color>
 </resources>
